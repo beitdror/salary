@@ -8,19 +8,19 @@
 
 <style>
   :root {
-    --glass-bg: rgba(255,255,255,0.12);
-    --glass-border: rgba(255,255,255,0.25);
-    --glass-shadow: 0 8px 32px rgba(0,0,0,0.18);
-    --blur: blur(18px);
+    --glass-bg: rgba(255,255,255,0.62);
+    --glass-border: rgba(255,255,255,0.85);
+    --glass-shadow: 0 8px 40px rgba(120,100,200,0.13);
+    --blur: blur(22px);
     --radius: 22px;
     --accent: #7c5cfc;
     --accent2: #e96bd1;
-    --accent3: #5ccffc;
-    --text: #fff;
-    --text-muted: rgba(255,255,255,0.65);
-    --danger: #ff5c7c;
-    --success: #5cfca0;
-    --warn: #ffd56b;
+    --accent3: #3bb8f7;
+    --text: #1a1535;
+    --text-muted: rgba(60,50,100,0.6);
+    --danger: #e0365a;
+    --success: #1db87a;
+    --warn: #f0a500;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -28,7 +28,7 @@
   body {
     font-family: 'Heebo', sans-serif;
     min-height: 100vh;
-    background: linear-gradient(135deg, #0f0c29 0%, #1a1040 35%, #24243e 65%, #0f2027 100%);
+    background: linear-gradient(135deg, #e8e4ff 0%, #f7e8fb 35%, #e4f0ff 65%, #f0faff 100%);
     color: var(--text);
     overflow-x: hidden;
     position: relative;
@@ -44,7 +44,7 @@
     height: 55%;
     z-index: 0;
     pointer-events: none;
-    opacity: 0.04;
+    opacity: 0.08;
     border-radius: 40px;
     background: linear-gradient(
       180deg,
@@ -64,11 +64,11 @@
     filter: blur(80px);
     pointer-events: none;
     z-index: 0;
-    opacity: 0.35;
+    opacity: 0.22;
   }
-  .orb1 { width: 500px; height: 500px; background: radial-gradient(circle, #7c5cfc, transparent); top: -150px; right: -100px; }
-  .orb2 { width: 400px; height: 400px; background: radial-gradient(circle, #e96bd1, transparent); bottom: -100px; left: -80px; }
-  .orb3 { width: 300px; height: 300px; background: radial-gradient(circle, #5ccffc, transparent); top: 40%; left: 40%; }
+  .orb1 { width: 500px; height: 500px; background: radial-gradient(circle, #b39dfa, transparent); top: -150px; right: -100px; }
+  .orb2 { width: 400px; height: 400px; background: radial-gradient(circle, #f0b8ee, transparent); bottom: -100px; left: -80px; }
+  .orb3 { width: 300px; height: 300px; background: radial-gradient(circle, #90d8f7, transparent); top: 40%; left: 40%; }
 
   /* Noise overlay */
   body::before {
@@ -92,8 +92,8 @@
   }
 
   .glass-dark {
-    background: rgba(0,0,0,0.22);
-    border: 1px solid rgba(255,255,255,0.12);
+    background: rgba(120,100,200,0.08);
+    border: 1px solid rgba(124,92,252,0.18);
     backdrop-filter: var(--blur);
     -webkit-backdrop-filter: var(--blur);
     border-radius: var(--radius);
@@ -140,7 +140,7 @@
     font-size: 28px;
     font-weight: 800;
     letter-spacing: -0.5px;
-    background: linear-gradient(135deg, #fff, rgba(255,255,255,0.7));
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -148,11 +148,10 @@
 
   .logo-sub { font-size: 14px; color: var(--text-muted); margin-top: 6px; }
 
-  /* Tabs */
   .auth-tabs {
     display: flex;
     gap: 4px;
-    background: rgba(0,0,0,0.2);
+    background: rgba(124,92,252,0.08);
     border-radius: 14px;
     padding: 4px;
     margin-bottom: 28px;
@@ -170,12 +169,14 @@
     transition: all 0.25s ease;
     border: none;
     background: transparent;
+    font-family: 'Heebo', sans-serif;
   }
 
   .auth-tab.active {
-    background: rgba(255,255,255,0.18);
-    color: white;
-    font-weight: 600;
+    background: white;
+    color: var(--accent);
+    font-weight: 700;
+    box-shadow: 0 2px 12px rgba(124,92,252,0.15);
   }
 
   /* Form inputs */
@@ -184,11 +185,11 @@
 
   .form-input {
     width: 100%;
-    background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,255,255,0.18);
+    background: rgba(255,255,255,0.75);
+    border: 1.5px solid rgba(124,92,252,0.2);
     border-radius: 14px;
     padding: 13px 16px;
-    color: white;
+    color: var(--text);
     font-family: 'Heebo', sans-serif;
     font-size: 15px;
     transition: all 0.2s ease;
@@ -197,13 +198,13 @@
 
   .form-input:focus {
     border-color: var(--accent);
-    background: rgba(124,92,252,0.12);
-    box-shadow: 0 0 0 3px rgba(124,92,252,0.2);
+    background: rgba(124,92,252,0.05);
+    box-shadow: 0 0 0 3px rgba(124,92,252,0.12);
   }
 
-  .form-input::placeholder { color: rgba(255,255,255,0.3); }
+  .form-input::placeholder { color: rgba(80,70,130,0.4); }
 
-  select.form-input option { background: #1a1040; color: white; }
+  select.form-input option { background: #f5f0ff; color: var(--text); }
 
   /* Buttons */
   .btn {
@@ -236,21 +237,21 @@
   .btn-primary:active { transform: translateY(0); }
 
   .btn-glass {
-    background: rgba(255,255,255,0.12);
-    border: 1px solid rgba(255,255,255,0.22);
-    color: white;
+    background: rgba(255,255,255,0.7);
+    border: 1.5px solid rgba(124,92,252,0.25);
+    color: var(--text);
     backdrop-filter: blur(8px);
   }
 
-  .btn-glass:hover { background: rgba(255,255,255,0.2); }
+  .btn-glass:hover { background: rgba(255,255,255,0.9); border-color: var(--accent); }
 
   .btn-danger {
-    background: rgba(255,92,124,0.2);
-    border: 1px solid rgba(255,92,124,0.4);
+    background: rgba(224,54,90,0.1);
+    border: 1.5px solid rgba(224,54,90,0.3);
     color: var(--danger);
   }
 
-  .btn-danger:hover { background: rgba(255,92,124,0.35); }
+  .btn-danger:hover { background: rgba(224,54,90,0.2); }
 
   .btn-sm { padding: 8px 14px; font-size: 13px; border-radius: 10px; }
 
@@ -266,10 +267,11 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: rgba(15,12,41,0.7);
+    background: rgba(255,255,255,0.75);
     backdrop-filter: blur(24px);
     -webkit-backdrop-filter: blur(24px);
-    border-bottom: 1px solid rgba(255,255,255,0.1);
+    border-bottom: 1px solid rgba(124,92,252,0.15);
+    box-shadow: 0 2px 20px rgba(120,100,200,0.08);
   }
 
   .header-logo { font-size: 20px; font-weight: 800; letter-spacing: -0.3px; }
@@ -312,7 +314,7 @@
     gap: 8px;
     padding: 10px 18px;
     border-radius: 12px;
-    border: 1px solid transparent;
+    border: 1.5px solid transparent;
     cursor: pointer;
     font-family: 'Heebo', sans-serif;
     font-size: 14px;
@@ -324,12 +326,13 @@
   }
 
   .nav-btn.active {
-    background: rgba(124,92,252,0.2);
-    border-color: rgba(124,92,252,0.4);
-    color: white;
+    background: rgba(124,92,252,0.12);
+    border-color: rgba(124,92,252,0.3);
+    color: var(--accent);
+    font-weight: 600;
   }
 
-  .nav-btn:hover:not(.active) { background: rgba(255,255,255,0.08); color: white; }
+  .nav-btn:hover:not(.active) { background: rgba(124,92,252,0.06); color: var(--text); }
 
   /* Content */
   .app-content {
@@ -396,7 +399,7 @@
     transition: all 0.2s;
   }
 
-  .shift-item:hover { background: rgba(255,255,255,0.14); }
+  .shift-item:hover { background: rgba(124,92,252,0.06); }
 
   .shift-date-badge {
     text-align: center;
@@ -449,12 +452,13 @@
     width: 100%;
     max-width: 520px;
     padding: 32px;
-    background: rgba(15,12,41,0.92);
-    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.92);
+    border: 1px solid rgba(124,92,252,0.2);
     backdrop-filter: blur(24px);
     border-radius: var(--radius);
     max-height: 90vh;
     overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(100,80,200,0.15);
   }
 
   .modal-header {
@@ -470,9 +474,9 @@
     width: 36px;
     height: 36px;
     border-radius: 50%;
-    background: rgba(255,255,255,0.1);
+    background: rgba(124,92,252,0.1);
     border: none;
-    color: white;
+    color: var(--text);
     cursor: pointer;
     font-size: 18px;
     display: flex;
@@ -481,12 +485,11 @@
     transition: all 0.2s;
   }
 
-  .close-btn:hover { background: rgba(255,92,124,0.3); }
+  .close-btn:hover { background: rgba(224,54,90,0.15); color: var(--danger); }
 
-  /* Salary preview */
   .salary-preview {
-    background: rgba(124,92,252,0.1);
-    border: 1px solid rgba(124,92,252,0.3);
+    background: rgba(124,92,252,0.06);
+    border: 1.5px solid rgba(124,92,252,0.2);
     border-radius: 14px;
     padding: 16px;
     margin-top: 16px;
@@ -500,7 +503,7 @@
     font-size: 14px;
   }
 
-  .salary-row:not(:last-child) { border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .salary-row:not(:last-child) { border-bottom: 1px solid rgba(124,92,252,0.1); }
   .salary-total { font-size: 18px; font-weight: 700; color: var(--success); }
 
   /* Settings / Profile */
@@ -524,8 +527,8 @@
     padding: 16px;
     border-radius: 14px;
     margin-bottom: 10px;
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1);
+    background: rgba(124,92,252,0.05);
+    border: 1.5px solid rgba(124,92,252,0.12);
   }
 
   .user-info { flex: 1; }
@@ -555,8 +558,8 @@
   }
 
   .notif.show { display: block; }
-  .notif.success { background: rgba(92,252,160,0.2); border: 1px solid rgba(92,252,160,0.4); color: var(--success); }
-  .notif.error { background: rgba(255,92,124,0.2); border: 1px solid rgba(255,92,124,0.4); color: var(--danger); }
+  .notif.success { background: rgba(29,184,122,0.12); border: 1px solid rgba(29,184,122,0.35); color: var(--success); }
+  .notif.error { background: rgba(224,54,90,0.1); border: 1px solid rgba(224,54,90,0.35); color: var(--danger); }
 
   @keyframes slideDown { from { opacity: 0; transform: translateX(-50%) translateY(-10px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
 
@@ -657,8 +660,8 @@
       <!-- Login Form -->
       <div id="login-form">
         <div class="form-group">
-          <label class="form-label">אימייל</label>
-          <input type="email" class="form-input" id="login-email" placeholder="your@email.com">
+          <label class="form-label">שם משתמש</label>
+          <input type="text" class="form-input" id="login-username" placeholder="שם משתמש שלך">
         </div>
         <div class="form-group">
           <label class="form-label">סיסמה</label>
@@ -676,8 +679,8 @@
           <input type="text" class="form-input" id="reg-name" placeholder="ישראל ישראלי">
         </div>
         <div class="form-group">
-          <label class="form-label">אימייל</label>
-          <input type="email" class="form-input" id="reg-email" placeholder="your@email.com">
+          <label class="form-label">שם משתמש</label>
+          <input type="text" class="form-input" id="reg-username" placeholder="username123">
         </div>
         <div class="form-group">
           <label class="form-label">סיסמה</label>
@@ -952,14 +955,13 @@ import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, si
 import { getFirestore, collection, addDoc, getDocs, doc, deleteDoc, setDoc, getDoc, query, where, orderBy, updateDoc } from 'https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js';
 
 const firebaseConfig = {
-  apiKey: "AIzaSyD5Ma2GAqiPFKurMedUgU6Qgl-qk_Uop-s",
-  authDomain: "beit-dror1.firebaseapp.com",
-  databaseURL: "https://beit-dror1-default-rtdb.europe-west1.firebasedatabase.app",
-  projectId: "beit-dror1",
-  storageBucket: "beit-dror1.firebasestorage.app",
-  messagingSenderId: "397103626096",
-  appId: "1:397103626096:web:85eb0db81a90320bc201b5",
-  measurementId: "G-5EVL2ML38Y"
+  apiKey: "AIzaSyB6YFRQw9HA-7h81uwr-xh63uJ0a2aY1C0",
+  authDomain: "salary-cf07d.firebaseapp.com",
+  projectId: "salary-cf07d",
+  storageBucket: "salary-cf07d.firebasestorage.app",
+  messagingSenderId: "168903696459",
+  appId: "1:168903696459:web:597b055da737fe96eaedce",
+  measurementId: "G-LTEGBTBTP8"
 };
 
 const app = initializeApp(firebaseConfig);
@@ -1147,17 +1149,18 @@ window.switchAuthTab = (tab) => {
 };
 
 window.doLogin = async () => {
-  const email = document.getElementById('login-email').value.trim();
+  const username = document.getElementById('login-username').value.trim();
   const pass = document.getElementById('login-password').value;
-  if (!email || !pass) return showNotif('אנא מלא אימייל וסיסמה', 'error');
+  if (!username || !pass) return showNotif('אנא מלא שם משתמש וסיסמה', 'error');
+  // Convert username to fake email for Firebase Auth
+  const email = username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@otot.app';
   const btn = document.getElementById('login-btn');
   btn.innerHTML = '<div class="spinner"></div>';
   try {
     await signInWithEmailAndPassword(auth, email, pass);
   } catch (e) {
-    let msg = 'שגיאה בהתחברות';
-    if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password') msg = 'אימייל או סיסמה שגויים';
-    if (e.code === 'auth/user-not-found') msg = 'משתמש לא נמצא';
+    let msg = 'שם משתמש או סיסמה שגויים';
+    if (e.code === 'auth/user-not-found') msg = 'משתמש לא קיים במערכת';
     showNotif(msg, 'error');
     btn.innerHTML = '<span>כניסה למערכת</span>';
   }
@@ -1165,23 +1168,26 @@ window.doLogin = async () => {
 
 window.doRegister = async () => {
   const name = document.getElementById('reg-name').value.trim();
-  const email = document.getElementById('reg-email').value.trim();
+  const username = document.getElementById('reg-username').value.trim();
   const pass = document.getElementById('reg-password').value;
   const seniority = parseInt(document.getElementById('reg-seniority').value) || 0;
-  if (!name || !email || !pass) return showNotif('אנא מלא את כל השדות', 'error');
+  if (!name || !username || !pass) return showNotif('אנא מלא את כל השדות', 'error');
   if (pass.length < 6) return showNotif('הסיסמה חייבת להכיל לפחות 6 תווים', 'error');
+  if (!/^[a-zA-Z0-9_]+$/.test(username)) return showNotif('שם משתמש יכול להכיל אותיות באנגלית, מספרים וקו תחתון בלבד', 'error');
+  // Convert username to fake email for Firebase Auth
+  const email = username.toLowerCase() + '@otot.app';
   const btn = document.getElementById('reg-btn');
   btn.innerHTML = '<div class="spinner"></div>';
   try {
     const cred = await createUserWithEmailAndPassword(auth, email, pass);
     await setDoc(doc(db, 'users', cred.user.uid), {
-      name, email, seniority,
+      name, username, email, seniority,
       createdAt: new Date().toISOString()
     });
     showNotif('החשבון נוצר בהצלחה!', 'success');
   } catch (e) {
     let msg = 'שגיאה ביצירת חשבון';
-    if (e.code === 'auth/email-already-in-use') msg = 'האימייל כבר רשום במערכת';
+    if (e.code === 'auth/email-already-in-use') msg = 'שם המשתמש כבר תפוס, בחר שם אחר';
     showNotif(msg, 'error');
     btn.innerHTML = '<span>יצירת חשבון</span>';
   }
@@ -1578,10 +1584,10 @@ window.loadAdminUsers = async () => {
 
     container.innerHTML = users.map(u => `
       <div class="user-row">
-        <div class="user-avatar" style="min-width:36px;">${(u.name || u.email || '?').charAt(0).toUpperCase()}</div>
+        <div class="user-avatar" style="min-width:36px;">${(u.name || u.username || '?').charAt(0).toUpperCase()}</div>
         <div class="user-info">
           <div class="user-email">${u.name || '—'}</div>
-          <div class="user-meta">${u.email} · ותק: ${u.seniority || 0} חודשים</div>
+          <div class="user-meta">@${u.username || u.email} · ותק: ${u.seniority || 0} חודשים</div>
         </div>
         <button class="btn btn-danger btn-sm" onclick="adminDeleteUser('${u.id}')">🗑️ מחק</button>
       </div>
