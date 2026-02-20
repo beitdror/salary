@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>אותות — מערכת ניהול משמרות</title>
+<title>משמרות — מערכת ניהול שעות ושכר</title>
 <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
 
 <style>
@@ -647,9 +647,9 @@
   <div id="auth-screen">
     <div class="glass auth-card">
       <div class="logo-area">
-        <div class="logo-icon">🌟</div>
-        <div class="logo-title">אותות</div>
-        <div class="logo-sub">מערכת ניהול משמרות ושכר</div>
+        <div class="logo-icon">🕐</div>
+        <div class="logo-title">משמרות שלי</div>
+        <div class="logo-sub">מערכת ניהול שעות ושכר לעובדים</div>
       </div>
 
       <div class="auth-tabs">
@@ -679,16 +679,16 @@
           <input type="text" class="form-input" id="reg-name" placeholder="ישראל ישראלי">
         </div>
         <div class="form-group">
-          <label class="form-label">שם משתמש</label>
-          <input type="text" class="form-input" id="reg-username" placeholder="username123">
+          <label class="form-label">שם משתמש (כל שם, גם בעברית)</label>
+          <input type="text" class="form-input" id="reg-username" placeholder="למשל: דנה, moshe123, דני ל">
         </div>
         <div class="form-group">
-          <label class="form-label">סיסמה</label>
-          <input type="password" class="form-input" id="reg-password" placeholder="לפחות 6 תווים">
+          <label class="form-label">סיסמה (לפחות 4 תווים)</label>
+          <input type="password" class="form-input" id="reg-password" placeholder="סיסמה פשוטה כמו 1234">
         </div>
         <div class="form-group">
-          <label class="form-label">ותק (חודשים מתחילת עבודה)</label>
-          <input type="number" class="form-input" id="reg-seniority" placeholder="0" min="0">
+          <label class="form-label">תאריך תחילת עבודה</label>
+          <input type="month" class="form-input" id="reg-start-date" placeholder="חודש ושנת התחלה">
         </div>
         <button class="btn btn-primary" onclick="doRegister()" id="reg-btn">
           <span>יצירת חשבון</span>
@@ -703,7 +703,7 @@
 
     <!-- Header -->
     <header class="app-header">
-      <div class="header-logo">אות<span>ות</span></div>
+      <div class="header-logo">🕐 <span>משמרות שלי</span></div>
       <nav class="app-nav" style="padding: 0; flex: 1; justify-content: center;">
         <button class="nav-btn active" onclick="showPage('dashboard')" id="nav-dashboard">📊 דאשבורד</button>
         <button class="nav-btn" onclick="showPage('shifts')" id="nav-shifts">🕐 משמרות</button>
@@ -822,13 +822,14 @@
               <input type="text" class="form-input" id="profile-name" placeholder="שם מלא">
             </div>
             <div class="form-group">
-              <label class="form-label">ותק (חודשים מתחילת עבודה)</label>
-              <input type="number" class="form-input" id="profile-seniority" placeholder="0" min="0">
+              <label class="form-label">תאריך תחילת עבודה</label>
+              <input type="month" class="form-input" id="profile-start-date">
+              <div style="font-size:12px; color:var(--text-muted); margin-top:6px;" id="profile-seniority-display"></div>
             </div>
           </div>
 
           <div class="settings-section">
-            <div class="settings-label">שכר בסיס לפי ותק</div>
+            <div class="settings-label">שכר בסיס לפי ותק (מתאריך תחילת עבודה)</div>
             <div class="glass-dark" style="padding:16px;">
               <div class="salary-row">
                 <span>0–6 חודשים</span><span>₪37 לשעה</span>
@@ -843,7 +844,7 @@
                 <span style="color:var(--success)">שנה שלישית+</span><span style="color:var(--success)">₪40 לשעה</span>
               </div>
             </div>
-            <div style="margin-top:10px; padding: 12px 16px; background:rgba(124,92,252,0.12); border-radius:10px; font-size:14px;">
+            <div style="margin-top:10px; padding: 12px 16px; background:rgba(124,92,252,0.08); border-radius:10px; font-size:14px;">
               <span style="color:var(--text-muted)">תעריף שלך הנוכחי: </span>
               <strong id="profile-rate" style="color:var(--accent)">—</strong>
             </div>
@@ -969,10 +970,17 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // ============================================================
-// SALARY ENGINE — Based on collective agreement (אותות 2025)
+// SALARY ENGINE — Based on collective agreement 2025
 // ============================================================
-function getHourlyRate(seniority) {
-  const months = parseInt(seniority) || 0;
+function calcSeniorityMonths(startDate) {
+  if (!startDate) return 0;
+  const start = new Date(startDate + '-01');
+  const now = new Date();
+  return (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
+}
+
+function getHourlyRate(startDate) {
+  const months = calcSeniorityMonths(startDate);
   if (months < 6) return 37;
   if (months < 12) return 37.5;
   if (months < 24) return 39;
@@ -987,8 +995,8 @@ function parseTime(timeStr) {
 
 function minutesToHours(m) { return m / 60; }
 
-function calcShiftPay(startTime, endTime, shiftType, seniority) {
-  const rate = getHourlyRate(seniority);
+function calcShiftPay(startTime, endTime, shiftType, startDate) {
+  const rate = getHourlyRate(startDate);
   let result = { regularHours: 0, nightHours: 0, overtimeHours: 0, totalPay: 0, breakdown: [] };
 
   if (!startTime || !endTime) return result;
@@ -1132,7 +1140,7 @@ function calcShiftPay(startTime, endTime, shiftType, seniority) {
 // ============================================================
 window._state = {
   user: null,
-  userProfile: { name: '', seniority: 0 },
+  userProfile: { name: '', startDate: null },
   shifts: [],
   adminAuthed: false
 };
@@ -1148,20 +1156,31 @@ window.switchAuthTab = (tab) => {
   document.getElementById('register-form').style.display = tab === 'register' ? 'block' : 'none';
 };
 
+// Simple hash for any string (including Hebrew) → safe ASCII string
+function hashUsername(str) {
+  let hash = 5381;
+  for (let i = 0; i < str.length; i++) {
+    hash = ((hash << 5) + hash) + str.charCodeAt(i);
+    hash = hash & hash;
+  }
+  return Math.abs(hash).toString(36);
+}
+
 window.doLogin = async () => {
   const username = document.getElementById('login-username').value.trim();
   const pass = document.getElementById('login-password').value;
   if (!username || !pass) return showNotif('אנא מלא שם משתמש וסיסמה', 'error');
-  // Convert username to fake email for Firebase Auth
-  const email = username.toLowerCase().replace(/[^a-z0-9]/g, '') + '@otot.app';
+  // Convert any username (incl. Hebrew) to safe Firebase email
+  const safeId = hashUsername(username.toLowerCase());
+  const email = 'u' + safeId + '@otot.app';
+  // Pad password same way as registration
+  const firebasePass = pass.length < 6 ? pass + '##pad' : pass;
   const btn = document.getElementById('login-btn');
   btn.innerHTML = '<div class="spinner"></div>';
   try {
-    await signInWithEmailAndPassword(auth, email, pass);
+    await signInWithEmailAndPassword(auth, email, firebasePass);
   } catch (e) {
-    let msg = 'שם משתמש או סיסמה שגויים';
-    if (e.code === 'auth/user-not-found') msg = 'משתמש לא קיים במערכת';
-    showNotif(msg, 'error');
+    showNotif('שם משתמש או סיסמה שגויים', 'error');
     btn.innerHTML = '<span>כניסה למערכת</span>';
   }
 };
@@ -1170,24 +1189,27 @@ window.doRegister = async () => {
   const name = document.getElementById('reg-name').value.trim();
   const username = document.getElementById('reg-username').value.trim();
   const pass = document.getElementById('reg-password').value;
-  const seniority = parseInt(document.getElementById('reg-seniority').value) || 0;
-  if (!name || !username || !pass) return showNotif('אנא מלא את כל השדות', 'error');
-  if (pass.length < 6) return showNotif('הסיסמה חייבת להכיל לפחות 6 תווים', 'error');
-  if (!/^[a-zA-Z0-9_]+$/.test(username)) return showNotif('שם משתמש יכול להכיל אותיות באנגלית, מספרים וקו תחתון בלבד', 'error');
-  // Convert username to fake email for Firebase Auth
-  const email = username.toLowerCase() + '@otot.app';
+  const startDate = document.getElementById('reg-start-date').value; // format: YYYY-MM
+  if (!name || !username || !pass) return showNotif('אנא מלא שם, שם משתמש וסיסמה', 'error');
+  if (pass.length < 4) return showNotif('הסיסמה חייבת להכיל לפחות 4 תווים', 'error');
+  if (!startDate) return showNotif('אנא בחר תאריך תחילת עבודה', 'error');
+  // Hash any username (Hebrew/English/anything) → safe Firebase email
+  const safeId = hashUsername(username.toLowerCase());
+  const email = 'u' + safeId + '@otot.app';
+  // Pad password to 6 chars min for Firebase (internally)
+  const firebasePass = pass.length < 6 ? pass + '##pad' : pass;
   const btn = document.getElementById('reg-btn');
   btn.innerHTML = '<div class="spinner"></div>';
   try {
-    const cred = await createUserWithEmailAndPassword(auth, email, pass);
+    const cred = await createUserWithEmailAndPassword(auth, email, firebasePass);
     await setDoc(doc(db, 'users', cred.user.uid), {
-      name, username, email, seniority,
+      name, username, email, startDate,
       createdAt: new Date().toISOString()
     });
-    showNotif('החשבון נוצר בהצלחה!', 'success');
+    showNotif('החשבון נוצר בהצלחה! 🎉', 'success');
   } catch (e) {
     let msg = 'שגיאה ביצירת חשבון';
-    if (e.code === 'auth/email-already-in-use') msg = 'שם המשתמש כבר תפוס, בחר שם אחר';
+    if (e.code === 'auth/email-already-in-use') msg = 'שם המשתמש "' + username + '" כבר תפוס, בחר שם אחר';
     showNotif(msg, 'error');
     btn.innerHTML = '<span>יצירת חשבון</span>';
   }
@@ -1225,11 +1247,12 @@ async function loadUserProfile(uid) {
 
 window.saveProfile = async () => {
   const name = document.getElementById('profile-name').value.trim();
-  const seniority = parseInt(document.getElementById('profile-seniority').value) || 0;
+  const startDate = document.getElementById('profile-start-date').value;
+  if (!startDate) return showNotif('אנא בחר תאריך תחילת עבודה', 'error');
   try {
-    await updateDoc(doc(db, 'users', window._state.user.uid), { name, seniority });
+    await updateDoc(doc(db, 'users', window._state.user.uid), { name, startDate });
     window._state.userProfile.name = name;
-    window._state.userProfile.seniority = seniority;
+    window._state.userProfile.startDate = startDate;
     updateHeaderUI();
     showNotif('הפרופיל נשמר!', 'success');
     updateProfilePage();
@@ -1325,8 +1348,8 @@ window.saveShift = async () => {
 
   if (!date || !startTime || !endTime) return showNotif('אנא מלא תאריך ושעות', 'error');
 
-  const seniority = window._state.userProfile?.seniority || 0;
-  const calc = calcShiftPay(startTime, endTime, shiftType, seniority);
+  const startDate = window._state.userProfile?.startDate || null;
+  const calc = calcShiftPay(startTime, endTime, shiftType, startDate);
 
   let startMin = parseTime(startTime);
   let endMin = parseTime(endTime);
@@ -1385,8 +1408,8 @@ window.updateSalaryPreview = () => {
   const start = document.getElementById('shift-start').value;
   const end = document.getElementById('shift-end').value;
   const type = document.getElementById('shift-type').value;
-  const seniority = window._state.userProfile?.seniority || 0;
-  const calc = calcShiftPay(start, end, type, seniority);
+  const startDate = window._state.userProfile?.startDate || null;
+  const calc = calcShiftPay(start, end, type, startDate);
 
   let html = '';
   calc.breakdown.forEach(b => {
@@ -1544,9 +1567,22 @@ window.exportExcelLike = () => exportCSV(); // Same CSV works in Excel with .csv
 window.updateProfilePage = () => {
   const p = window._state.userProfile;
   document.getElementById('profile-name').value = p?.name || '';
-  document.getElementById('profile-seniority').value = p?.seniority || 0;
-  const rate = getHourlyRate(p?.seniority || 0);
+  document.getElementById('profile-start-date').value = p?.startDate || '';
+  const months = calcSeniorityMonths(p?.startDate);
+  const rate = getHourlyRate(p?.startDate);
   document.getElementById('profile-rate').textContent = `₪${rate} לשעה`;
+  const display = document.getElementById('profile-seniority-display');
+  if (p?.startDate) {
+    const years = Math.floor(months / 12);
+    const remMonths = months % 12;
+    let text = `ותק: `;
+    if (years > 0) text += `${years} שנה${years > 1 ? 'ים' : ''} `;
+    if (remMonths > 0) text += `ו-${remMonths} חודשים`;
+    if (years === 0 && remMonths === 0) text += 'פחות מחודש';
+    display.textContent = text;
+  } else {
+    display.textContent = '';
+  }
 };
 
 // ============================================================
@@ -1587,7 +1623,7 @@ window.loadAdminUsers = async () => {
         <div class="user-avatar" style="min-width:36px;">${(u.name || u.username || '?').charAt(0).toUpperCase()}</div>
         <div class="user-info">
           <div class="user-email">${u.name || '—'}</div>
-          <div class="user-meta">@${u.username || u.email} · ותק: ${u.seniority || 0} חודשים</div>
+          <div class="user-meta">@${u.username || '—'} · התחיל: ${u.startDate || 'לא ידוע'}</div>
         </div>
         <button class="btn btn-danger btn-sm" onclick="adminDeleteUser('${u.id}')">🗑️ מחק</button>
       </div>
