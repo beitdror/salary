@@ -603,6 +603,37 @@
 
   /* Responsive */
   @media (max-width: 640px) {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    padding: 10px 6px;
+    border-radius: 14px;
+    border: 2px solid rgba(124,92,252,0.15);
+    background: rgba(124,92,252,0.05);
+    cursor: pointer;
+    font-family: 'Heebo', sans-serif;
+    font-size: 18px;
+    color: var(--text-muted);
+    transition: all 0.18s ease;
+    line-height: 1.2;
+  }
+
+  .type-btn span { font-size: 11px; font-weight: 600; }
+
+  .type-btn.active {
+    border-color: var(--accent);
+    background: rgba(124,92,252,0.14);
+    color: var(--accent);
+    box-shadow: 0 2px 12px rgba(124,92,252,0.2);
+  }
+
+  .type-btn:hover:not(.active) {
+    border-color: rgba(124,92,252,0.35);
+    background: rgba(124,92,252,0.08);
+    color: var(--text);
+  }
     .app-header { padding: 12px 16px; }
     .app-content { padding: 0 16px 40px; }
     .app-nav { padding: 12px 16px; }
@@ -903,34 +934,56 @@
 
     <input type="hidden" id="edit-shift-id">
 
+    <!-- Shift type selector -->
     <div class="form-group">
-      <label class="form-label">תאריך</label>
-      <input type="date" class="form-input" id="shift-date">
+      <label class="form-label">סוג משמרת</label>
+      <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;" id="type-grid">
+        <button class="type-btn active" data-type="מלאה" onclick="selectType(this)">🌙<br><span>מלאה</span></button>
+        <button class="type-btn" data-type="יומית" onclick="selectType(this)">☀️<br><span>יומית</span></button>
+        <button class="type-btn" data-type="שבת" onclick="selectType(this)">✡️<br><span>שבת</span></button>
+        <button class="type-btn" data-type="חג" onclick="selectType(this)">🎉<br><span>חג</span></button>
+        <button class="type-btn" data-type="הכשרה" onclick="selectType(this)">📚<br><span>הכשרה</span></button>
+        <button class="type-btn" data-type="ישיבת_צוות" onclick="selectType(this)">💬<br><span>ישיבת צוות</span></button>
+        <button class="type-btn" data-type="אחר" onclick="selectType(this)">✏️<br><span>אחר</span></button>
+      </div>
+    </div>
+
+    <!-- Custom name (shown for "אחר") -->
+    <div class="form-group" id="custom-name-group" style="display:none;">
+      <label class="form-label">שם מותאם אישית</label>
+      <input type="text" class="form-input" id="shift-custom-name" placeholder="למשל: כוננות, החלפה...">
+    </div>
+
+    <!-- Shabbat auto-notice -->
+    <div id="shabbat-notice" style="display:none; background:rgba(124,92,252,0.1); border:1.5px solid rgba(124,92,252,0.3); border-radius:12px; padding:10px 14px; font-size:13px; margin-bottom:12px;">
+      ✡️ <strong>שבת זוהתה אוטומטית</strong> — סוג המשמרת עודכן לשבת (150%)
+    </div>
+
+    <!-- Date row: for overnight shifts show both dates -->
+    <div id="date-section-overnight" style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      <div class="form-group">
+        <label class="form-label">תאריך כניסה</label>
+        <input type="date" class="form-input" id="shift-date" onchange="onDateChange()">
+      </div>
+      <div class="form-group" id="end-date-group">
+        <label class="form-label">תאריך יציאה <span style="font-size:11px; opacity:0.7;">(ממולא אוטומטית)</span></label>
+        <input type="date" class="form-input" id="shift-end-date" onchange="updateSalaryPreview()">
+      </div>
     </div>
 
     <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
       <div class="form-group">
         <label class="form-label">שעת כניסה</label>
-        <input type="time" class="form-input" id="shift-start">
+        <input type="time" class="form-input" id="shift-start" onchange="onTimeChange()">
       </div>
       <div class="form-group">
         <label class="form-label">שעת יציאה</label>
-        <input type="time" class="form-input" id="shift-end">
+        <input type="time" class="form-input" id="shift-end" onchange="updateSalaryPreview()">
       </div>
     </div>
 
-    <div class="form-group">
-      <label class="form-label">סוג משמרת</label>
-      <select class="form-input" id="shift-type" onchange="updateSalaryPreview()">
-        <option value="יומית">יומית (16:00–22:00)</option>
-        <option value="לילה">לילה (מלאה)</option>
-        <option value="מלאה">מלאה (לינה)</option>
-        <option value="שבת">שבת</option>
-        <option value="חג">חג</option>
-        <option value="הכשרה">הכשרה</option>
-        <option value="ישיבת_צוות">ישיבת צוות</option>
-      </select>
-    </div>
+    <!-- Duration hint -->
+    <div id="duration-hint" style="font-size:13px; color:var(--text-muted); margin-bottom:12px; padding:8px 12px; background:rgba(60,50,100,0.06); border-radius:10px;"></div>
 
     <div class="form-group">
       <label class="form-label">הערות (אופציונלי)</label>
@@ -938,7 +991,7 @@
     </div>
 
     <div class="salary-preview" id="salary-preview">
-      <div style="font-size:13px; font-weight:600; margin-bottom:10px; color:var(--text-muted);">💰 תחשיב שכר מוקדם</div>
+      <div style="font-size:13px; font-weight:600; margin-bottom:10px; color:var(--text-muted);">💰 תחשיב שכר</div>
       <div id="salary-preview-content"></div>
     </div>
 
@@ -987,6 +1040,28 @@ function getHourlyRate(startDate) {
   return 40;
 }
 
+// Check if a date (YYYY-MM-DD) falls on Shabbat (Friday after ~18:00 or Saturday)
+function isShabbat(dateStr, timeStr) {
+  if (!dateStr) return false;
+  const d = new Date(dateStr);
+  const day = d.getDay(); // 0=Sun,5=Fri,6=Sat
+  if (day === 6) return true; // Saturday always shabbat
+  if (day === 5 && timeStr) {
+    // Friday evening: from ~18:00
+    const [h] = timeStr.split(':').map(Number);
+    if (h >= 18) return true;
+  }
+  return false;
+}
+
+// Next day date string
+function nextDay(dateStr) {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().split('T')[0];
+}
+
 function parseTime(timeStr) {
   if (!timeStr) return null;
   const [h, m] = timeStr.split(':').map(Number);
@@ -995,92 +1070,125 @@ function parseTime(timeStr) {
 
 function minutesToHours(m) { return m / 60; }
 
-function calcShiftPay(startTime, endTime, shiftType, startDate) {
-  const rate = getHourlyRate(startDate);
-  let result = { regularHours: 0, nightHours: 0, overtimeHours: 0, totalPay: 0, breakdown: [] };
+// Total minutes between two date+time combos
+function calcTotalMinutes(startDate, startTime, endDate, endTime) {
+  if (!startDate || !startTime || !endDate || !endTime) return 0;
+  const start = new Date(`${startDate}T${startTime}`);
+  const end = new Date(`${endDate}T${endTime}`);
+  return (end - start) / 60000;
+}
 
-  if (!startTime || !endTime) return result;
+/**
+ * Main salary calculator
+ * startDate/endDate = YYYY-MM-DD
+ * startTime/endTime = HH:MM
+ * shiftType = string
+ * workStartDate = employee start date for seniority
+ */
+function calcShiftPay(startDate, startTime, endDate, endTime, shiftType, workStartDate) {
+  const rate = getHourlyRate(workStartDate);
+  let result = { regularHours: 0, overtimeHours: 0, totalPay: 0, breakdown: [], totalMinutes: 0 };
 
-  let startMin = parseTime(startTime);
-  let endMin = parseTime(endTime);
-  if (endMin <= startMin) endMin += 24 * 60; // overnight
+  if (!startDate || !startTime || !endDate || !endTime) return result;
 
-  const totalMinutes = endMin - startMin;
-  let hours = minutesToHours(totalMinutes);
+  const totalMins = calcTotalMinutes(startDate, startTime, endDate, endTime);
+  if (totalMins <= 0) return result;
+  result.totalMinutes = totalMins;
+  const totalHours = totalMins / 60;
 
-  // Special shift types
-  if (shiftType === 'ישיבת_צוות' || shiftType === 'הכשרה') {
-    result.regularHours = hours;
-    result.totalPay = hours * rate;
-    result.breakdown = [{ label: 'שעות הכשרה/ישיבה', hours: +hours.toFixed(2), pay: +(hours * rate).toFixed(2) }];
+  // --- Meetings & Training: straight pay ---
+  if (shiftType === 'ישיבת_צוות' || shiftType === 'הכשרה' || shiftType === 'אחר') {
+    result.regularHours = totalHours;
+    result.totalPay = totalHours * rate;
+    result.breakdown = [{ label: 'שעות עבודה', hours: +totalHours.toFixed(2), pay: +(totalHours * rate).toFixed(2) }];
     return result;
   }
 
+  // --- Shabbat: 150% for all hours ---
   if (shiftType === 'שבת') {
     const shabbatRate = rate * 1.5;
-    result.regularHours = hours;
-    result.totalPay = hours * shabbatRate;
-    result.breakdown = [{ label: 'שעות שבת (150%)', hours: +hours.toFixed(2), pay: +(hours * shabbatRate).toFixed(2) }];
+    result.regularHours = totalHours;
+    result.totalPay = totalHours * shabbatRate;
+    result.breakdown = [{ label: `שעות שבת (${totalHours.toFixed(2)}ש × ₪${rate} × 150%)`, hours: +totalHours.toFixed(2), pay: +result.totalPay.toFixed(2) }];
     return result;
   }
 
+  // --- Holiday: 150% ---
   if (shiftType === 'חג') {
     const holidayRate = rate * 1.5;
-    result.regularHours = hours;
-    result.totalPay = hours * holidayRate;
-    result.breakdown = [{ label: 'שעות חג (150%)', hours: +hours.toFixed(2), pay: +(hours * holidayRate).toFixed(2) }];
+    result.regularHours = totalHours;
+    result.totalPay = totalHours * holidayRate;
+    result.breakdown = [{ label: `שעות חג (${totalHours.toFixed(2)}ש × ₪${rate} × 150%)`, hours: +totalHours.toFixed(2), pay: +result.totalPay.toFixed(2) }];
     return result;
   }
 
-  // For full/night/day shifts — apply time-of-day rules per agreement section 17
-  // Hours 16:00–22:00 → regular work
-  // Hours 22:00–23:00 → not counted as work for pay
-  // Hours 23:00–01:00 → sleeping duty (minimum pay if applicable)
-  // Hours 01:00–06:00 → sleeping (no pay unless awake)
-  // Hours 06:00+ → regular work
+  // --- Full overnight shift / night shift: apply section 17 time-of-day rules ---
+  // We work in absolute minutes from midnight of startDate
+  // startMin is absolute from midnight, endMin can be >24*60 for next-day end
+  const startMin = parseTime(startTime);
+  // endMin: calculate as total minutes from start of startDate
+  const endAbsMin = startMin + totalMins;
 
-  const WORK_START = 16 * 60;  // 16:00
-  const SLEEP_START = 22 * 60; // 22:00
-  const SLEEP_GAP = 23 * 60;   // 23:00 (gap 22–23 not paid)
-  const NIGHT_END_1 = 25 * 60; // 01:00 next day
-  const MORNING = 30 * 60;     // 06:00 next day
+  // Time bands (per agreement section 17):
+  // 16:00–22:00 = regular paid work
+  // 22:00–23:00 = NOT paid (transition gap)
+  // 23:00–01:00 = night duty (paid, full rate)
+  // 01:00–06:00 = sleep duty (NOT paid)
+  // 06:00–...   = regular paid work (morning)
+  // For shabbat-adjacent: if shift starts friday evening, entire shift at shabbat rate
+
+  // Check if shift spans into Shabbat
+  const startDayOfWeek = new Date(startDate).getDay();
+  const endDayOfWeek = new Date(endDate).getDay();
+  const endsOnSaturday = endDayOfWeek === 6;
+  const startsOnFridayEvening = startDayOfWeek === 5 && parseTime(startTime) >= 18 * 60;
+
+  if (startsOnFridayEvening || (startDayOfWeek === 6)) {
+    // Full shabbat rate
+    const shabbatRate = rate * 1.5;
+    result.regularHours = totalHours;
+    result.totalPay = totalHours * shabbatRate;
+    result.breakdown = [{ label: `שעות שבת (150%)`, hours: +totalHours.toFixed(2), pay: +result.totalPay.toFixed(2) }];
+    return result;
+  }
 
   if (shiftType === 'מלאה' || shiftType === 'לילה') {
-    // Full overnight shift logic
+    // Absolute time bands from midnight of shift start day (in minutes)
+    const bands = [
+      { from: 0,       to: 6*60,   paid: false, label: null },             // 00:00–06:00 sleep
+      { from: 6*60,    to: 16*60,  paid: true,  label: 'שעות בוקר (06-16)' },  // 06:00–16:00 regular
+      { from: 16*60,   to: 22*60,  paid: true,  label: 'שעות ערב (16-22)' },   // 16:00–22:00 regular
+      { from: 22*60,   to: 23*60,  paid: false, label: null },             // 22:00–23:00 gap
+      { from: 23*60,   to: 25*60,  paid: true,  label: 'שעות לילה (23-01)' },  // 23:00–01:00 night duty
+      { from: 25*60,   to: 30*60,  paid: false, label: null },             // 01:00–06:00 sleep
+      { from: 30*60,   to: 40*60,  paid: true,  label: 'שעות בוקר (06+)' },    // 06:00+ morning (next day)
+      { from: 40*60,   to: 46*60,  paid: true,  label: 'שעות ערב יום ב\'' },   // next afternoon
+    ];
+
     let payableHours = 0;
-    let nightBonusHours = 0;
+    const breakdownMap = {};
 
-    // Evening portion 16:00–22:00 (regular work hours)
-    const eveningStart = Math.max(startMin, WORK_START);
-    const eveningEnd = Math.min(endMin, SLEEP_START);
-    if (eveningEnd > eveningStart) {
-      const h = minutesToHours(eveningEnd - eveningStart);
-      payableHours += h;
-      result.breakdown.push({ label: 'שעות ערב (16-22)', hours: +h.toFixed(2), pay: +(h * rate).toFixed(2) });
+    for (const band of bands) {
+      if (!band.paid) continue;
+      const overlapStart = Math.max(startMin, band.from);
+      const overlapEnd = Math.min(endAbsMin, band.to);
+      if (overlapEnd > overlapStart) {
+        const h = minutesToHours(overlapEnd - overlapStart);
+        payableHours += h;
+        if (!breakdownMap[band.label]) breakdownMap[band.label] = 0;
+        breakdownMap[band.label] += h;
+      }
     }
 
-    // 22:00–23:00 not paid
-    // 23:00–01:00 night duty (full pay)
-    const nightStart = Math.max(startMin, SLEEP_GAP);
-    const nightEnd = Math.min(endMin, NIGHT_END_1);
-    if (nightEnd > nightStart) {
-      const h = minutesToHours(nightEnd - nightStart);
-      payableHours += h;
-      result.breakdown.push({ label: 'שעות לילה (23-01)', hours: +h.toFixed(2), pay: +(h * rate).toFixed(2) });
-    }
-
-    // Morning from 06:00 (regular)
-    if (endMin > MORNING) {
-      const morningStart = Math.max(startMin, MORNING);
-      const h = minutesToHours(endMin - morningStart);
-      payableHours += h;
-      result.breakdown.push({ label: 'שעות בוקר (06+)', hours: +h.toFixed(2), pay: +(h * rate).toFixed(2) });
+    // Build breakdown before overtime
+    for (const [label, h] of Object.entries(breakdownMap)) {
+      result.breakdown.push({ label, hours: +h.toFixed(2), pay: +(h * rate).toFixed(2) });
     }
 
     result.regularHours = payableHours;
     result.totalPay = payableHours * rate;
 
-    // Overtime: if total payable > 8.3h → first 1.25x, then 1.5x (section 9.8)
+    // Overtime (section 9.8): >8.3h payable → 125% first 2h, then 150%
     if (payableHours > 8.3) {
       const overtime = payableHours - 8.3;
       const regularPay = 8.3 * rate;
@@ -1089,26 +1197,26 @@ function calcShiftPay(startTime, endTime, shiftType, startDate) {
         overtimePay = overtime * rate * 1.25;
         result.breakdown.push({ label: 'שע"נ 125%', hours: +overtime.toFixed(2), pay: +overtimePay.toFixed(2) });
       } else {
-        const extra1 = 2 * rate * 1.25;
-        const extra2 = (overtime - 2) * rate * 1.5;
-        overtimePay = extra1 + extra2;
-        result.breakdown.push({ label: 'שע"נ 125% (2ש)', hours: 2, pay: +extra1.toFixed(2) });
-        result.breakdown.push({ label: 'שע"נ 150%', hours: +(overtime - 2).toFixed(2), pay: +extra2.toFixed(2) });
+        const e1 = 2 * rate * 1.25;
+        const e2 = (overtime - 2) * rate * 1.5;
+        overtimePay = e1 + e2;
+        result.breakdown.push({ label: 'שע"נ 125% (2ש)', hours: 2, pay: +e1.toFixed(2) });
+        result.breakdown.push({ label: 'שע"נ 150%', hours: +(overtime - 2).toFixed(2), pay: +e2.toFixed(2) });
       }
       result.overtimeHours = overtime;
       result.totalPay = regularPay + overtimePay;
     }
 
   } else {
-    // Day shift — simpler calculation
-    if (hours > 8.3) {
-      const overtime = hours - 8.3;
+    // Day shift — simple overtime
+    if (totalHours > 8.3) {
+      const overtime = totalHours - 8.3;
       const regularPay = 8.3 * rate;
       let overtimePay = 0;
       if (overtime <= 2) {
         overtimePay = overtime * rate * 1.25;
         result.breakdown = [
-          { label: 'שעות רגילות (8.3)', hours: 8.3, pay: +regularPay.toFixed(2) },
+          { label: 'שעות רגילות', hours: 8.3, pay: +regularPay.toFixed(2) },
           { label: 'שע"נ 125%', hours: +overtime.toFixed(2), pay: +overtimePay.toFixed(2) }
         ];
       } else {
@@ -1125,9 +1233,9 @@ function calcShiftPay(startTime, endTime, shiftType, startDate) {
       result.overtimeHours = overtime;
       result.totalPay = regularPay + overtimePay;
     } else {
-      result.regularHours = hours;
-      result.totalPay = hours * rate;
-      result.breakdown = [{ label: 'שעות עבודה', hours: +hours.toFixed(2), pay: +(hours * rate).toFixed(2) }];
+      result.regularHours = totalHours;
+      result.totalPay = totalHours * rate;
+      result.breakdown = [{ label: 'שעות עבודה', hours: +totalHours.toFixed(2), pay: +(totalHours * rate).toFixed(2) }];
     }
   }
 
@@ -1306,15 +1414,83 @@ async function loadShifts() {
   }
 }
 
+// ============================================================
+// MODAL STATE
+// ============================================================
+let _currentShiftType = 'מלאה';
+
+window.selectType = (btn) => {
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  _currentShiftType = btn.dataset.type;
+  document.getElementById('custom-name-group').style.display = _currentShiftType === 'אחר' ? 'block' : 'none';
+  const isOvernight = (_currentShiftType === 'מלאה' || _currentShiftType === 'לילה');
+  document.getElementById('end-date-group').style.display = isOvernight ? 'block' : 'none';
+  if (isOvernight) autoFillEndDate();
+  updateSalaryPreview();
+};
+
+window.onDateChange = () => {
+  const date = document.getElementById('shift-date').value;
+  const startTime = document.getElementById('shift-start').value;
+  autoDetectShabbat(date, startTime);
+  autoFillEndDate();
+  updateSalaryPreview();
+};
+
+window.onTimeChange = () => {
+  const date = document.getElementById('shift-date').value;
+  const startTime = document.getElementById('shift-start').value;
+  autoDetectShabbat(date, startTime);
+  autoFillEndDate();
+  updateSalaryPreview();
+};
+
+function autoDetectShabbat(date, time) {
+  const notice = document.getElementById('shabbat-notice');
+  if (isShabbat(date, time) && _currentShiftType !== 'שבת' && _currentShiftType !== 'חג') {
+    notice.style.display = 'block';
+    document.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === 'שבת'));
+    _currentShiftType = 'שבת';
+    document.getElementById('custom-name-group').style.display = 'none';
+    document.getElementById('end-date-group').style.display = 'none';
+  } else if (!isShabbat(date, time) && _currentShiftType === 'שבת') {
+    notice.style.display = 'none';
+  }
+}
+
+function autoFillEndDate() {
+  const date = document.getElementById('shift-date').value;
+  const startTime = document.getElementById('shift-start').value;
+  const endTime = document.getElementById('shift-end').value;
+  const isOvernight = (_currentShiftType === 'מלאה' || _currentShiftType === 'לילה');
+  if (isOvernight && date) {
+    const endDateEl = document.getElementById('shift-end-date');
+    if (!endDateEl.value) endDateEl.value = nextDay(date);
+    // If end <= start, suggest next day
+    if (startTime && endTime && parseTime(endTime) <= parseTime(startTime)) {
+      if (!endDateEl.value || endDateEl.value === date) endDateEl.value = nextDay(date);
+    }
+  }
+}
+
 window.openAddShift = () => {
   document.getElementById('modal-shift-title').textContent = '➕ הוספת משמרת';
   document.getElementById('edit-shift-id').value = '';
-  document.getElementById('shift-date').value = new Date().toISOString().split('T')[0];
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('shift-date').value = today;
+  document.getElementById('shift-end-date').value = nextDay(today);
   document.getElementById('shift-start').value = '16:00';
   document.getElementById('shift-end').value = '08:00';
-  document.getElementById('shift-type').value = 'יומית';
   document.getElementById('shift-notes').value = '';
+  document.getElementById('shift-custom-name').value = '';
+  document.getElementById('shabbat-notice').style.display = 'none';
+  document.getElementById('custom-name-group').style.display = 'none';
+  _currentShiftType = 'מלאה';
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === 'מלאה'));
+  document.getElementById('end-date-group').style.display = 'block';
   document.getElementById('save-shift-btn').textContent = 'שמור משמרת';
+  autoDetectShabbat(today, '16:00');
   updateSalaryPreview();
   document.getElementById('modal-add-shift').classList.add('open');
 };
@@ -1325,10 +1501,18 @@ window.openEditShift = (id) => {
   document.getElementById('modal-shift-title').textContent = '✏️ עריכת משמרת';
   document.getElementById('edit-shift-id').value = id;
   document.getElementById('shift-date').value = shift.date;
+  document.getElementById('shift-end-date').value = shift.endDate || nextDay(shift.date);
   document.getElementById('shift-start').value = shift.startTime;
   document.getElementById('shift-end').value = shift.endTime;
-  document.getElementById('shift-type').value = shift.shiftType;
   document.getElementById('shift-notes').value = shift.notes || '';
+  document.getElementById('shift-custom-name').value = shift.customName || '';
+  document.getElementById('shabbat-notice').style.display = 'none';
+  const type = shift.shiftType || 'מלאה';
+  _currentShiftType = type;
+  document.querySelectorAll('.type-btn').forEach(b => b.classList.toggle('active', b.dataset.type === type));
+  document.getElementById('custom-name-group').style.display = type === 'אחר' ? 'block' : 'none';
+  const isOvernight = (type === 'מלאה' || type === 'לילה');
+  document.getElementById('end-date-group').style.display = isOvernight ? 'block' : 'none';
   document.getElementById('save-shift-btn').textContent = 'עדכן משמרת';
   updateSalaryPreview();
   document.getElementById('modal-add-shift').classList.add('open');
@@ -1343,23 +1527,28 @@ window.saveShift = async () => {
   const date = document.getElementById('shift-date').value;
   const startTime = document.getElementById('shift-start').value;
   const endTime = document.getElementById('shift-end').value;
-  const shiftType = document.getElementById('shift-type').value;
+  const shiftType = _currentShiftType;
   const notes = document.getElementById('shift-notes').value.trim();
+  const customName = document.getElementById('shift-custom-name').value.trim();
+
+  const isOvernight = (shiftType === 'מלאה' || shiftType === 'לילה');
+  let endDate = isOvernight
+    ? (document.getElementById('shift-end-date').value || nextDay(date))
+    : date;
+  if (!isOvernight && parseTime(endTime) < parseTime(startTime)) endDate = nextDay(date);
 
   if (!date || !startTime || !endTime) return showNotif('אנא מלא תאריך ושעות', 'error');
 
-  const startDate = window._state.userProfile?.startDate || null;
-  const calc = calcShiftPay(startTime, endTime, shiftType, startDate);
-
-  let startMin = parseTime(startTime);
-  let endMin = parseTime(endTime);
-  if (endMin <= startMin) endMin += 24 * 60;
-  const durationHours = (endMin - startMin) / 60;
+  const workStartDate = window._state.userProfile?.startDate || null;
+  const calc = calcShiftPay(date, startTime, endDate, endTime, shiftType, workStartDate);
+  const totalHours = +(calc.totalMinutes / 60).toFixed(2);
+  const displayName = shiftType === 'אחר' && customName ? customName : shiftType.replace('_', ' ');
 
   const shiftData = {
     uid: window._state.user.uid,
-    date, startTime, endTime, shiftType, notes,
-    durationHours: +durationHours.toFixed(2),
+    date, endDate, startTime, endTime,
+    shiftType, customName: customName || '', displayName, notes,
+    durationHours: totalHours,
     calculatedPay: calc.totalPay,
     payBreakdown: calc.breakdown,
     month: date.substring(0, 7)
@@ -1405,17 +1594,45 @@ window.deleteShift = async (id) => {
 // SALARY PREVIEW in modal
 // ============================================================
 window.updateSalaryPreview = () => {
+  const date = document.getElementById('shift-date').value;
   const start = document.getElementById('shift-start').value;
   const end = document.getElementById('shift-end').value;
-  const type = document.getElementById('shift-type').value;
-  const startDate = window._state.userProfile?.startDate || null;
-  const calc = calcShiftPay(start, end, type, startDate);
+  const type = _currentShiftType;
+  const isOvernight = (type === 'מלאה' || type === 'לילה');
+  let endDate = isOvernight
+    ? (document.getElementById('shift-end-date').value || nextDay(date))
+    : date;
+  if (!isOvernight && parseTime(end) < parseTime(start)) endDate = nextDay(date);
 
+  const workStartDate = window._state.userProfile?.startDate || null;
+  const calc = calcShiftPay(date, start, endDate, end, type, workStartDate);
+
+  // Duration hint
+  const hint = document.getElementById('duration-hint');
+  if (calc.totalMinutes > 0) {
+    const totalH = calc.totalMinutes / 60;
+    const h = Math.floor(totalH);
+    const m = Math.round((totalH - h) * 60);
+    const endNote = endDate && endDate !== date ? ` · יציאה ${endDate}` : '';
+    hint.textContent = `⏱ סה"כ ${h} שעות${m > 0 ? ' ו-' + m + ' דקות' : ''}${endNote}`;
+    hint.style.display = 'block';
+  } else {
+    hint.style.display = 'none';
+  }
+
+  const rate = getHourlyRate(workStartDate);
   let html = '';
-  calc.breakdown.forEach(b => {
-    html += `<div class="salary-row"><span>${b.label} (${b.hours}ש)</span><span>₪${b.pay.toFixed(0)}</span></div>`;
-  });
-  html += `<div class="salary-row"><span style="font-weight:700">סה"כ לשמירה</span><span class="salary-total">₪${calc.totalPay.toFixed(0)}</span></div>`;
+  if (calc.breakdown.length === 0) {
+    html = '<div style="color:var(--text-muted); font-size:13px;">מלא תאריך ושעות לחישוב</div>';
+  } else {
+    calc.breakdown.forEach(b => {
+      html += '<div class="salary-row"><span>' + b.label + '</span><span style="font-weight:600">₪' + b.pay.toFixed(0) + '</span></div>';
+    });
+    html += '<div class="salary-row" style="border-top:1.5px solid rgba(124,92,252,0.2);margin-top:4px;padding-top:8px;">' +
+      '<span style="font-weight:700;font-size:15px;">סה"כ</span>' +
+      '<span class="salary-total" style="font-size:20px;">₪' + calc.totalPay.toFixed(0) + '</span></div>';
+    html += '<div style="font-size:11px;color:var(--text-muted);margin-top:6px;">תעריף: ₪' + rate + '/שעה</div>';
+  }
   document.getElementById('salary-preview-content').innerHTML = html;
 };
 
@@ -1482,13 +1699,18 @@ function renderShiftItem(s, showActions = false) {
   const d = new Date(s.date);
   const day = d.getDate();
   const month = d.toLocaleDateString('he-IL', { month: 'short' });
+  const typeKey = s.shiftType || '';
   const badgeClass = {
     'לילה': 'badge-night', 'יומית': 'badge-day', 'שבת': 'badge-shabbat',
     'חג': 'badge-holiday', 'הכשרה': 'badge-training', 'ישיבת_צוות': 'badge-meeting',
-    'מלאה': 'badge-full'
-  }[s.shiftType] || 'badge-day';
+    'מלאה': 'badge-full', 'אחר': 'badge-day'
+  }[typeKey] || 'badge-day';
 
-  const typeLabel = s.shiftType.replace('_', ' ');
+  const displayName = s.displayName || s.shiftType?.replace('_', ' ') || '—';
+  const isOvernight = s.endDate && s.endDate !== s.date;
+  const timeStr = isOvernight
+    ? `${s.startTime} (${s.date}) → ${s.endTime} (${s.endDate})`
+    : `${s.startTime} – ${s.endTime}`;
 
   return `<div class="glass shift-item">
     <div class="shift-date-badge">
@@ -1496,12 +1718,12 @@ function renderShiftItem(s, showActions = false) {
       <div class="shift-month">${month}</div>
     </div>
     <div class="shift-info">
-      <div><span class="shift-type-badge ${badgeClass}">${typeLabel}</span></div>
-      <div class="shift-times">${s.startTime} – ${s.endTime} · ${s.durationHours}ש${s.notes ? ' · ' + s.notes : ''}</div>
+      <div><span class="shift-type-badge ${badgeClass}">${displayName}</span></div>
+      <div class="shift-times">${timeStr} · ${s.durationHours}ש${s.notes ? ' · ' + s.notes : ''}</div>
     </div>
     <div style="text-align:left;">
       <div class="shift-pay">₪${Math.round(s.calculatedPay || 0).toLocaleString()}</div>
-      <div class="shift-hours">${s.durationHours}ש עבודה</div>
+      <div class="shift-hours">${s.durationHours}ש</div>
     </div>
     <div class="shift-actions">
       <button class="btn btn-glass btn-sm" onclick="openEditShift('${s.id}')">✏️</button>
@@ -1679,7 +1901,7 @@ window.showNotif = (msg, type = 'success') => {
 
 // Real-time preview as user changes shift times/type
 document.addEventListener('DOMContentLoaded', () => {
-  ['shift-start', 'shift-end', 'shift-type'].forEach(id => {
+  ['shift-start', 'shift-end'].forEach(id => {
     document.getElementById(id)?.addEventListener('change', updateSalaryPreview);
   });
 });
