@@ -602,7 +602,7 @@
   @keyframes spin { to { transform: rotate(360deg); } }
 
   /* Responsive */
-  @media (max-width: 640px) {
+  .type-btn {
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -611,28 +611,83 @@
     padding: 10px 6px;
     border-radius: 14px;
     border: 2px solid rgba(124,92,252,0.15);
-    background: rgba(124,92,252,0.05);
+    background: rgba(255,255,255,0.6);
     cursor: pointer;
     font-family: 'Heebo', sans-serif;
     font-size: 18px;
     color: var(--text-muted);
     transition: all 0.18s ease;
     line-height: 1.2;
+    backdrop-filter: blur(8px);
   }
 
-  .type-btn span { font-size: 11px; font-weight: 600; }
+  .type-btn span { font-size: 11px; font-weight: 600; margin-top: 2px; }
 
   .type-btn.active {
     border-color: var(--accent);
-    background: rgba(124,92,252,0.14);
+    background: linear-gradient(135deg, rgba(124,92,252,0.18), rgba(233,107,209,0.12));
     color: var(--accent);
-    box-shadow: 0 2px 12px rgba(124,92,252,0.2);
+    box-shadow: 0 3px 14px rgba(124,92,252,0.25);
+    transform: translateY(-1px);
   }
 
   .type-btn:hover:not(.active) {
     border-color: rgba(124,92,252,0.35);
-    background: rgba(124,92,252,0.08);
+    background: rgba(124,92,252,0.07);
     color: var(--text);
+    transform: translateY(-1px);
+  }
+
+  /* Month picker cards on dashboard */
+  .month-picker-strip {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding: 4px 2px 8px;
+    margin-bottom: 20px;
+  }
+  .month-picker-strip::-webkit-scrollbar { display: none; }
+  .month-pill {
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 10px 16px;
+    border-radius: 14px;
+    border: 1.5px solid rgba(124,92,252,0.15);
+    background: rgba(255,255,255,0.55);
+    cursor: pointer;
+    font-family: 'Heebo', sans-serif;
+    transition: all 0.2s ease;
+    min-width: 72px;
+    backdrop-filter: blur(8px);
+  }
+  .month-pill:hover { border-color: rgba(124,92,252,0.4); background: rgba(124,92,252,0.07); transform: translateY(-2px); }
+  .month-pill.active {
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    border-color: transparent;
+    color: white;
+    box-shadow: 0 4px 18px rgba(124,92,252,0.4);
+    transform: translateY(-2px);
+  }
+  .month-pill-name { font-size: 13px; font-weight: 700; }
+  .month-pill-year { font-size: 10px; opacity: 0.7; margin-top: 1px; }
+  .month-pill-count { font-size: 10px; font-weight: 600; margin-top: 3px; padding: 1px 6px; border-radius: 8px; background: rgba(124,92,252,0.12); color: var(--accent); }
+  .month-pill.active .month-pill-count { background: rgba(255,255,255,0.25); color: white; }
+
+  /* Print styles */
+  @media print {
+    body { background: white !important; }
+    .pride-bg, .orb, body::before, .app-header, .app-nav, #page-dashboard,
+    #page-shifts, #page-profile, #page-admin, .notif { display: none !important; }
+    #page-export { display: block !important; }
+    .print-report { display: block !important; }
+    .no-print { display: none !important; }
+    .print-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .print-table th, .print-table td { border: 1px solid #ccc; padding: 8px 10px; text-align: right; }
+    .print-table th { background: #f0edff; font-weight: 700; }
+    .print-header { text-align: center; margin-bottom: 20px; }
   }
     .app-header { padding: 12px 16px; }
     .app-content { padding: 0 16px 40px; }
@@ -761,6 +816,9 @@
           <button class="btn btn-primary" style="width:auto; padding: 12px 22px;" onclick="openAddShift()">+ משמרת חדשה</button>
         </div>
 
+        <!-- Month Picker Strip -->
+        <div class="month-picker-strip" id="month-picker-strip"></div>
+
         <div class="stats-grid">
           <div class="glass stat-card purple">
             <div class="stat-icon">⏰</div>
@@ -778,7 +836,7 @@
             <div class="stat-icon">📅</div>
             <div class="stat-label">משמרות</div>
             <div class="stat-value" id="stat-shifts">0</div>
-            <div class="stat-sub">החודש</div>
+            <div class="stat-sub">בחודש הנבחר</div>
           </div>
           <div class="glass stat-card green">
             <div class="stat-icon">🌙</div>
@@ -788,9 +846,9 @@
           </div>
         </div>
 
-        <!-- Recent shifts -->
+        <!-- Shifts of selected month -->
         <div class="section-header">
-          <div class="section-title">משמרות אחרונות</div>
+          <div class="section-title" id="dash-shifts-title">משמרות החודש</div>
         </div>
         <div class="shift-list" id="recent-shifts-list">
           <div class="empty-state">
@@ -805,12 +863,10 @@
       <div class="page" id="page-shifts">
         <div style="padding: 20px 0 16px; display:flex; align-items:center; justify-content:space-between;">
           <div style="font-size:22px; font-weight:800;">כל המשמרות</div>
-          <div style="display:flex; gap:10px; align-items:center;">
-            <select class="form-input" style="width:auto; padding: 10px 16px;" id="filter-month" onchange="renderShiftsPage()">
-            </select>
-            <button class="btn btn-primary" style="width:auto; padding: 12px 22px;" onclick="openAddShift()">+ הוסף</button>
-          </div>
+          <button class="btn btn-primary" style="width:auto; padding: 12px 22px;" onclick="openAddShift()">+ הוסף</button>
         </div>
+        <!-- Month strip for shifts page -->
+        <div class="month-picker-strip" id="shifts-month-strip"></div>
         <div class="shift-list" id="all-shifts-list"></div>
       </div>
 
@@ -818,25 +874,22 @@
       <div class="page" id="page-export">
         <div style="padding: 20px 0 16px;">
           <div style="font-size:22px; font-weight:800;">ייצוא דוח חודשי</div>
-          <div style="color:var(--text-muted); font-size:14px; margin-top:4px;">יצא דוח Excel/CSV מוכן להגשה לפי מבנה הדוח הרשמי</div>
+          <div style="color:var(--text-muted); font-size:14px; margin-top:4px;">הדפס דוח ישירות מהדפדפן — ללא חישוב שכר</div>
         </div>
 
-        <div class="glass" style="padding:28px; margin-bottom:20px;">
+        <div class="glass no-print" style="padding:28px; margin-bottom:20px;">
           <div class="form-group">
-            <label class="form-label">בחר חודש לייצוא</label>
-            <select class="form-input" id="export-month" style="max-width:300px;"></select>
+            <label class="form-label">בחר חודש</label>
+            <select class="form-input" id="export-month" style="max-width:300px;" onchange="renderExportPage()"></select>
           </div>
-
-          <div class="glass-dark" style="padding:20px; margin-top:16px; margin-bottom:20px;" id="export-preview">
-            <div style="font-size:14px; font-weight:600; margin-bottom:12px;">תצוגה מקדימה</div>
-            <div id="export-preview-content" style="color:var(--text-muted); font-size:13px;">בחר חודש לתצוגה מקדימה</div>
-          </div>
-
-          <div style="display:flex; gap:12px; flex-wrap:wrap;">
-            <button class="btn btn-primary" style="width:auto;" onclick="exportCSV()">⬇️ ייצוא CSV</button>
-            <button class="btn btn-glass" onclick="exportExcelLike()">📊 ייצוא Excel</button>
+          <div style="display:flex; gap:12px; flex-wrap:wrap; margin-top:16px;">
+            <button class="btn btn-primary" style="width:auto;" onclick="printReport()">🖨️ הדפס דוח</button>
+            <button class="btn btn-glass" onclick="exportCSV()">⬇️ ייצוא CSV</button>
           </div>
         </div>
+
+        <!-- Print preview & actual print target -->
+        <div id="print-report-area" style="margin-top:0;"></div>
       </div>
 
       <!-- PROFILE PAGE -->
@@ -872,7 +925,10 @@
                 <span>שנה שנייה</span><span>₪39 לשעה</span>
               </div>
               <div class="salary-row">
-                <span style="color:var(--success)">שנה שלישית+</span><span style="color:var(--success)">₪40 לשעה</span>
+                <span style="color:var(--success)">שנה שלישית (25-36 חודש)</span><span style="color:var(--success)">₪40 לשעה</span>
+              </div>
+              <div class="salary-row">
+                <span style="color:var(--success)">שנה רביעית+ (ותק נוסף)</span><span style="color:var(--success)">₪40 + 1% לשנה (מצטבר)</span>
               </div>
             </div>
             <div style="margin-top:10px; padding: 12px 16px; background:rgba(124,92,252,0.08); border-radius:10px; font-size:14px;">
@@ -938,13 +994,14 @@
     <div class="form-group">
       <label class="form-label">סוג משמרת</label>
       <div style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px;" id="type-grid">
-        <button class="type-btn active" data-type="מלאה" onclick="selectType(this)">🌙<br><span>מלאה</span></button>
-        <button class="type-btn" data-type="יומית" onclick="selectType(this)">☀️<br><span>יומית</span></button>
-        <button class="type-btn" data-type="שבת" onclick="selectType(this)">✡️<br><span>שבת</span></button>
-        <button class="type-btn" data-type="חג" onclick="selectType(this)">🎉<br><span>חג</span></button>
-        <button class="type-btn" data-type="הכשרה" onclick="selectType(this)">📚<br><span>הכשרה</span></button>
-        <button class="type-btn" data-type="ישיבת_צוות" onclick="selectType(this)">💬<br><span>ישיבת צוות</span></button>
-        <button class="type-btn" data-type="אחר" onclick="selectType(this)">✏️<br><span>אחר</span></button>
+        <button class="type-btn active" data-type="מלאה" onclick="selectType(this)"><span style="font-size:22px;">🌙</span><span>מלאה</span></button>
+        <button class="type-btn" data-type="יומית" onclick="selectType(this)"><span style="font-size:22px;">☀️</span><span>יומית</span></button>
+        <button class="type-btn" data-type="לילה" onclick="selectType(this)"><span style="font-size:22px;">🌃</span><span>לילה</span></button>
+        <button class="type-btn" data-type="שבת" onclick="selectType(this)"><span style="font-size:22px;">✡️</span><span>שבת</span></button>
+        <button class="type-btn" data-type="חג" onclick="selectType(this)"><span style="font-size:22px;">🎉</span><span>חג</span></button>
+        <button class="type-btn" data-type="הכשרה" onclick="selectType(this)"><span style="font-size:22px;">📚</span><span>הכשרה</span></button>
+        <button class="type-btn" data-type="ישיבת_צוות" onclick="selectType(this)"><span style="font-size:22px;">💬</span><span>ישיבה</span></button>
+        <button class="type-btn" data-type="אחר" onclick="selectType(this)"><span style="font-size:22px;">✏️</span><span>אחר</span></button>
       </div>
     </div>
 
@@ -1023,8 +1080,11 @@ const auth = getAuth(app);
 const db = getFirestore(app);
 
 // ============================================================
-// SALARY ENGINE — Based on collective agreement 2025
+// SALARY ENGINE — Based on collective agreement September 2025
 // ============================================================
+
+const MINIMUM_WAGE = 32.30; // שכר מינימום לשעה (ס' 17 בהסכם)
+
 function calcSeniorityMonths(startDate) {
   if (!startDate) return 0;
   const start = new Date(startDate + '-01');
@@ -1032,29 +1092,45 @@ function calcSeniorityMonths(startDate) {
   return (now.getFullYear() - start.getFullYear()) * 12 + (now.getMonth() - start.getMonth());
 }
 
+/**
+ * getHourlyRate — per section 14 & 15 of the 2025 collective agreement.
+ * 0–6 months:   ₪37/hr
+ * 6–12 months:  ₪37.5/hr
+ * 13–24 months: ₪39/hr  (year 2)
+ * 25–36 months: ₪40/hr  (year 3)
+ * 37+ months:   ₪40 + cumulative 1% per additional year beyond year 3
+ *   Year 4 (37–48 months) = 40 × 1.01
+ *   Year 5 (49–60 months) = 40 × 1.02
+ *   etc.
+ */
 function getHourlyRate(startDate) {
   const months = calcSeniorityMonths(startDate);
-  if (months < 6) return 37;
+  if (months < 6)  return 37;
   if (months < 12) return 37.5;
   if (months < 24) return 39;
-  return 40;
+  if (months < 36) return 40;
+  // Year 4 onwards: 1% cumulative bonus per year beyond the 3rd
+  const extraYears = Math.floor((months - 36) / 12) + 1; // Year 4 = 1 bonus year, Year 5 = 2, …
+  return +(40 * Math.pow(1.01, extraYears)).toFixed(4);
 }
 
-// Check if a date (YYYY-MM-DD) falls on Shabbat (Friday after ~18:00 or Saturday)
+/**
+ * isShabbat — returns true if the date+time falls within Shabbat
+ * (Friday ≥ 18:00 or any time on Saturday)
+ */
 function isShabbat(dateStr, timeStr) {
   if (!dateStr) return false;
   const d = new Date(dateStr);
-  const day = d.getDay(); // 0=Sun,5=Fri,6=Sat
-  if (day === 6) return true; // Saturday always shabbat
+  const day = d.getDay(); // 0=Sun … 5=Fri, 6=Sat
+  if (day === 6) return true;
   if (day === 5 && timeStr) {
-    // Friday evening: from ~18:00
     const [h] = timeStr.split(':').map(Number);
     if (h >= 18) return true;
   }
   return false;
 }
 
-// Next day date string
+// Next day date string helper
 function nextDay(dateStr) {
   if (!dateStr) return '';
   const d = new Date(dateStr);
@@ -1070,20 +1146,50 @@ function parseTime(timeStr) {
 
 function minutesToHours(m) { return m / 60; }
 
-// Total minutes between two date+time combos
 function calcTotalMinutes(startDate, startTime, endDate, endTime) {
   if (!startDate || !startTime || !endDate || !endTime) return 0;
   const start = new Date(`${startDate}T${startTime}`);
-  const end = new Date(`${endDate}T${endTime}`);
+  const end   = new Date(`${endDate}T${endTime}`);
   return (end - start) / 60000;
 }
 
 /**
- * Main salary calculator
+ * applyOvertimeToWorkHours — applies 125%/150% overtime rules.
+ * Overtime is triggered ONLY when actual "work hours" (not sleep/gap) exceed 8.3h.
+ * @param {number} workHours — hours that count toward the OT threshold
+ * @param {number} baseRegularPay — pay already calculated for the regular work hours
+ * @param {number} rate — hourly rate
+ * @param {Array}  breakdown — existing breakdown array (mutated)
+ * @returns {{ extraPay: number, overtimeHours: number }}
+ */
+function applyOvertimeToWorkHours(workHours, baseRegularPay, rate, breakdown) {
+  const OT_THRESHOLD = 8.3;
+  if (workHours <= OT_THRESHOLD) return { extraPay: 0, overtimeHours: 0 };
+
+  const overtime = workHours - OT_THRESHOLD;
+  // The regular work-hours pay must be recalculated: first 8.3h at 100%,
+  // then overtime at 125% / 150%. The "base" already paid normal rate —
+  // we need to add the premium (25% / 50%) on top.
+  let extraPay = 0;
+  if (overtime <= 2) {
+    extraPay = overtime * rate * 0.25; // premium portion only (already paid 100% in base)
+    breakdown.push({ label: 'שעות נוספות 125%', hours: +overtime.toFixed(2), pay: +(overtime * rate * 1.25).toFixed(2) });
+  } else {
+    extraPay = 2 * rate * 0.25 + (overtime - 2) * rate * 0.5;
+    breakdown.push({ label: 'שעות נוספות 125%', hours: 2, pay: +(2 * rate * 1.25).toFixed(2) });
+    breakdown.push({ label: 'שעות נוספות 150%', hours: +(overtime - 2).toFixed(2), pay: +((overtime - 2) * rate * 1.5).toFixed(2) });
+  }
+  return { extraPay, overtimeHours: overtime };
+}
+
+/**
+ * calcShiftPay — Main salary calculator
+ * Per the 2025 collective agreement (הסכם קיבוצי מיוחד ספטמבר 2025).
+ *
  * startDate/endDate = YYYY-MM-DD
  * startTime/endTime = HH:MM
- * shiftType = string
- * workStartDate = employee start date for seniority
+ * shiftType = string key
+ * workStartDate = employee's employment start date (YYYY-MM)
  */
 function calcShiftPay(startDate, startTime, endDate, endTime, shiftType, workStartDate) {
   const rate = getHourlyRate(workStartDate);
@@ -1096,150 +1202,159 @@ function calcShiftPay(startDate, startTime, endDate, endTime, shiftType, workSta
   result.totalMinutes = totalMins;
   const totalHours = totalMins / 60;
 
-  // --- Meetings & Training: straight pay ---
+  // ── Meetings & Training: straight pay, no overnight rules ──────────────
   if (shiftType === 'ישיבת_צוות' || shiftType === 'הכשרה' || shiftType === 'אחר') {
     result.regularHours = totalHours;
-    result.totalPay = totalHours * rate;
-    result.breakdown = [{ label: 'שעות עבודה', hours: +totalHours.toFixed(2), pay: +(totalHours * rate).toFixed(2) }];
+    result.totalPay = +(totalHours * rate).toFixed(2);
+    result.breakdown = [{ label: 'שעות עבודה', hours: +totalHours.toFixed(2), pay: result.totalPay }];
     return result;
   }
 
-  // --- Shabbat: 150% for all hours ---
+  // ── Shabbat: 150% for all hours ────────────────────────────────────────
   if (shiftType === 'שבת') {
-    const shabbatRate = rate * 1.5;
+    const pay = +(totalHours * rate * 1.5).toFixed(2);
     result.regularHours = totalHours;
-    result.totalPay = totalHours * shabbatRate;
-    result.breakdown = [{ label: `שעות שבת (${totalHours.toFixed(2)}ש × ₪${rate} × 150%)`, hours: +totalHours.toFixed(2), pay: +result.totalPay.toFixed(2) }];
+    result.totalPay = pay;
+    result.breakdown = [{ label: `שעות שבת (150%) — ${totalHours.toFixed(2)}ש × ₪${rate}`, hours: +totalHours.toFixed(2), pay }];
     return result;
   }
 
-  // --- Holiday: 150% ---
+  // ── Holiday: 150% ──────────────────────────────────────────────────────
   if (shiftType === 'חג') {
-    const holidayRate = rate * 1.5;
+    const pay = +(totalHours * rate * 1.5).toFixed(2);
     result.regularHours = totalHours;
-    result.totalPay = totalHours * holidayRate;
-    result.breakdown = [{ label: `שעות חג (${totalHours.toFixed(2)}ש × ₪${rate} × 150%)`, hours: +totalHours.toFixed(2), pay: +result.totalPay.toFixed(2) }];
+    result.totalPay = pay;
+    result.breakdown = [{ label: `שעות חג (150%) — ${totalHours.toFixed(2)}ש × ₪${rate}`, hours: +totalHours.toFixed(2), pay }];
     return result;
   }
 
-  // --- Full overnight shift / night shift: apply section 17 time-of-day rules ---
-  // We work in absolute minutes from midnight of startDate
-  // startMin is absolute from midnight, endMin can be >24*60 for next-day end
-  const startMin = parseTime(startTime);
-  // endMin: calculate as total minutes from start of startDate
-  const endAbsMin = startMin + totalMins;
-
-  // Time bands (per agreement section 17):
-  // 16:00–22:00 = regular paid work
-  // 22:00–23:00 = NOT paid (transition gap)
-  // 23:00–01:00 = night duty (paid, full rate)
-  // 01:00–06:00 = sleep duty (NOT paid)
-  // 06:00–...   = regular paid work (morning)
-  // For shabbat-adjacent: if shift starts friday evening, entire shift at shabbat rate
-
-  // Check if shift spans into Shabbat
+  // ── Check for Shabbat-adjacent starts ─────────────────────────────────
   const startDayOfWeek = new Date(startDate).getDay();
-  const endDayOfWeek = new Date(endDate).getDay();
-  const endsOnSaturday = endDayOfWeek === 6;
   const startsOnFridayEvening = startDayOfWeek === 5 && parseTime(startTime) >= 18 * 60;
-
-  if (startsOnFridayEvening || (startDayOfWeek === 6)) {
-    // Full shabbat rate
-    const shabbatRate = rate * 1.5;
+  if (startsOnFridayEvening || startDayOfWeek === 6) {
+    const pay = +(totalHours * rate * 1.5).toFixed(2);
     result.regularHours = totalHours;
-    result.totalPay = totalHours * shabbatRate;
-    result.breakdown = [{ label: `שעות שבת (150%)`, hours: +totalHours.toFixed(2), pay: +result.totalPay.toFixed(2) }];
+    result.totalPay = pay;
+    result.breakdown = [{ label: `שעות שבת (150%)`, hours: +totalHours.toFixed(2), pay }];
     return result;
   }
 
+  // ── Full overnight / night shift — Section 17 time-band rules ──────────
   if (shiftType === 'מלאה' || shiftType === 'לילה') {
-    // Absolute time bands from midnight of shift start day (in minutes)
-    const bands = [
-      { from: 0,       to: 6*60,   paid: false, label: null },             // 00:00–06:00 sleep
-      { from: 6*60,    to: 16*60,  paid: true,  label: 'שעות בוקר (06-16)' },  // 06:00–16:00 regular
-      { from: 16*60,   to: 22*60,  paid: true,  label: 'שעות ערב (16-22)' },   // 16:00–22:00 regular
-      { from: 22*60,   to: 23*60,  paid: false, label: null },             // 22:00–23:00 gap
-      { from: 23*60,   to: 25*60,  paid: true,  label: 'שעות לילה (23-01)' },  // 23:00–01:00 night duty
-      { from: 25*60,   to: 30*60,  paid: false, label: null },             // 01:00–06:00 sleep
-      { from: 30*60,   to: 40*60,  paid: true,  label: 'שעות בוקר (06+)' },    // 06:00+ morning (next day)
-      { from: 40*60,   to: 46*60,  paid: true,  label: 'שעות ערב יום ב\'' },   // next afternoon
-    ];
+    /*
+     * All times expressed as minutes from midnight of the *start date*.
+     * For a shift starting at 16:00 and ending at 08:00 next day:
+     *   startMin = 16*60 = 960
+     *   endAbsMin = 960 + totalMins  (e.g. 960 + 960 = 1920 = 32*60 = 08:00 next day)
+     *
+     * Time bands (per section 17 of the 2025 agreement):
+     *   16:00–22:00  → Regular Work Hours  (regular rate, count toward OT)
+     *   22:00–23:00  → Gap Hour            (regular rate, does NOT count toward OT)
+     *   23:00–01:00  → Sleep Duty          (regular rate, does NOT count toward OT)
+     *   01:00–06:00  → Deep Sleep Duty     (MINIMUM WAGE,  does NOT count toward OT)
+     *   06:00+       → Regular Work Hours  (regular rate, count toward OT)
+     *
+     * The bands repeat for the next day (+24*60), covering two-day spans.
+     */
 
-    let payableHours = 0;
-    const breakdownMap = {};
+    const startMin  = parseTime(startTime);
+    const endAbsMin = startMin + totalMins;
+
+    // Build band definitions; repeat pattern for day 2 as well
+    function makeBands(offsetDay) {
+      const off = offsetDay * 24 * 60;
+      return [
+        // Day's morning before the typical shift start (06:00–16:00): regular work
+        { from: off + 6*60,  to: off + 16*60, type: 'work',       label: 'שעות עבודה (06-16)' },
+        // Evening regular work hours
+        { from: off + 16*60, to: off + 22*60, type: 'work',       label: 'שעות עבודה (16-22, 06+)' },
+        // Gap hour — paid regular but NOT a work hour
+        { from: off + 22*60, to: off + 23*60, type: 'gap',        label: 'שעת שהייה 22:00-23:00 (תעריף רגיל)' },
+        // Sleep duty regular — paid regular but NOT a work hour
+        { from: off + 23*60, to: off + 25*60, type: 'sleep_reg',  label: 'שעות לינה 23:00-01:00 (תעריף רגיל)' },
+        // Deep sleep — paid at minimum wage, NOT a work hour
+        { from: off + 25*60, to: off + 30*60, type: 'sleep_min',  label: 'שעות לינה 01:00-06:00 (שכר מינימום)' },
+        // Morning after deep sleep — regular work
+        { from: off + 30*60, to: off + 40*60, type: 'work',       label: 'שעות עבודה (16-22, 06+)' },
+      ];
+    }
+
+    const bands = [...makeBands(0), ...makeBands(1)];
+
+    // Accumulate hours per label
+    const workHoursAcc   = {}; // label → hours (for work-type bands)
+    const nonWorkHoursAcc = {}; // label → hours (for gap/sleep bands)
+    let totalWorkHours = 0; // only 'work' type bands feed OT
 
     for (const band of bands) {
-      if (!band.paid) continue;
       const overlapStart = Math.max(startMin, band.from);
-      const overlapEnd = Math.min(endAbsMin, band.to);
-      if (overlapEnd > overlapStart) {
-        const h = minutesToHours(overlapEnd - overlapStart);
-        payableHours += h;
-        if (!breakdownMap[band.label]) breakdownMap[band.label] = 0;
-        breakdownMap[band.label] += h;
-      }
-    }
-
-    // Build breakdown before overtime
-    for (const [label, h] of Object.entries(breakdownMap)) {
-      result.breakdown.push({ label, hours: +h.toFixed(2), pay: +(h * rate).toFixed(2) });
-    }
-
-    result.regularHours = payableHours;
-    result.totalPay = payableHours * rate;
-
-    // Overtime (section 9.8): >8.3h payable → 125% first 2h, then 150%
-    if (payableHours > 8.3) {
-      const overtime = payableHours - 8.3;
-      const regularPay = 8.3 * rate;
-      let overtimePay = 0;
-      if (overtime <= 2) {
-        overtimePay = overtime * rate * 1.25;
-        result.breakdown.push({ label: 'שע"נ 125%', hours: +overtime.toFixed(2), pay: +overtimePay.toFixed(2) });
+      const overlapEnd   = Math.min(endAbsMin, band.to);
+      if (overlapEnd <= overlapStart) continue;
+      const h = minutesToHours(overlapEnd - overlapStart);
+      if (band.type === 'work') {
+        totalWorkHours += h;
+        workHoursAcc[band.label] = (workHoursAcc[band.label] || 0) + h;
       } else {
-        const e1 = 2 * rate * 1.25;
-        const e2 = (overtime - 2) * rate * 1.5;
-        overtimePay = e1 + e2;
-        result.breakdown.push({ label: 'שע"נ 125% (2ש)', hours: 2, pay: +e1.toFixed(2) });
-        result.breakdown.push({ label: 'שע"נ 150%', hours: +(overtime - 2).toFixed(2), pay: +e2.toFixed(2) });
+        nonWorkHoursAcc[band.label] = (nonWorkHoursAcc[band.label] || 0) + h;
       }
-      result.overtimeHours = overtime;
-      result.totalPay = regularPay + overtimePay;
     }
 
-  } else {
-    // Day shift — simple overtime
-    if (totalHours > 8.3) {
-      const overtime = totalHours - 8.3;
-      const regularPay = 8.3 * rate;
-      let overtimePay = 0;
-      if (overtime <= 2) {
-        overtimePay = overtime * rate * 1.25;
-        result.breakdown = [
-          { label: 'שעות רגילות', hours: 8.3, pay: +regularPay.toFixed(2) },
-          { label: 'שע"נ 125%', hours: +overtime.toFixed(2), pay: +overtimePay.toFixed(2) }
-        ];
-      } else {
-        const e1 = 2 * rate * 1.25;
-        const e2 = (overtime - 2) * rate * 1.5;
-        overtimePay = e1 + e2;
-        result.breakdown = [
-          { label: 'שעות רגילות', hours: 8.3, pay: +regularPay.toFixed(2) },
-          { label: 'שע"נ 125%', hours: 2, pay: +e1.toFixed(2) },
-          { label: 'שע"נ 150%', hours: +(overtime - 2).toFixed(2), pay: +e2.toFixed(2) }
-        ];
-      }
-      result.regularHours = 8.3;
-      result.overtimeHours = overtime;
-      result.totalPay = regularPay + overtimePay;
-    } else {
-      result.regularHours = totalHours;
-      result.totalPay = totalHours * rate;
-      result.breakdown = [{ label: 'שעות עבודה', hours: +totalHours.toFixed(2), pay: +(totalHours * rate).toFixed(2) }];
+    // Build base pay: regular work hours (pre-OT adjustment) + non-work paid hours
+    let basePay = 0;
+
+    // Regular work hours at base rate
+    for (const [label, h] of Object.entries(workHoursAcc)) {
+      const pay = h * rate;
+      basePay += pay;
+      result.breakdown.push({ label, hours: +h.toFixed(2), pay: +pay.toFixed(2) });
     }
+
+    // Non-work paid hours
+    for (const [label, h] of Object.entries(nonWorkHoursAcc)) {
+      const isMinWage = label.includes('01:00-06:00');
+      const effectiveRate = isMinWage ? MINIMUM_WAGE : rate;
+      const pay = h * effectiveRate;
+      basePay += pay;
+      result.breakdown.push({ label, hours: +h.toFixed(2), pay: +pay.toFixed(2) });
+    }
+
+    // Apply overtime premium (only work-type hours count toward 8.3h threshold)
+    const { extraPay, overtimeHours } = applyOvertimeToWorkHours(totalWorkHours, totalWorkHours * rate, rate, result.breakdown);
+
+    result.regularHours  = totalWorkHours;
+    result.overtimeHours = overtimeHours;
+    result.totalPay      = +(basePay + extraPay).toFixed(2);
+    return result;
   }
 
-  result.totalPay = +result.totalPay.toFixed(2);
+  // ── Day shift — simple overtime ─────────────────────────────────────────
+  if (totalHours > 8.3) {
+    const overtime     = totalHours - 8.3;
+    const regularPay   = 8.3 * rate;
+    const breakdown    = [{ label: 'שעות עבודה', hours: 8.3, pay: +regularPay.toFixed(2) }];
+    let overtimePay    = 0;
+
+    if (overtime <= 2) {
+      overtimePay = overtime * rate * 1.25;
+      breakdown.push({ label: 'שעות נוספות 125%', hours: +overtime.toFixed(2), pay: +overtimePay.toFixed(2) });
+    } else {
+      const e1 = 2 * rate * 1.25;
+      const e2 = (overtime - 2) * rate * 1.5;
+      overtimePay = e1 + e2;
+      breakdown.push({ label: 'שעות נוספות 125%', hours: 2, pay: +e1.toFixed(2) });
+      breakdown.push({ label: 'שעות נוספות 150%', hours: +(overtime - 2).toFixed(2), pay: +e2.toFixed(2) });
+    }
+
+    result.regularHours  = 8.3;
+    result.overtimeHours = overtime;
+    result.totalPay      = +(regularPay + overtimePay).toFixed(2);
+    result.breakdown     = breakdown;
+  } else {
+    result.regularHours = totalHours;
+    result.totalPay     = +(totalHours * rate).toFixed(2);
+    result.breakdown    = [{ label: 'שעות עבודה', hours: +totalHours.toFixed(2), pay: result.totalPay }];
+  }
+
   return result;
 }
 
@@ -1399,17 +1514,16 @@ async function loadShifts() {
     const q = query(
       collection(db, 'shifts'),
       where('uid', '==', window._state.user.uid),
-      orderBy('date', 'desc')
+      orderBy('date', 'asc')
     );
     const snap = await getDocs(q);
     window._state.shifts = snap.docs.map(d => ({ id: d.id, ...d.data() }));
   } catch (e) {
-    // Index may not be ready, try without orderBy
     try {
       const q2 = query(collection(db, 'shifts'), where('uid', '==', window._state.user.uid));
       const snap = await getDocs(q2);
       window._state.shifts = snap.docs.map(d => ({ id: d.id, ...d.data() }))
-        .sort((a, b) => b.date.localeCompare(a.date));
+        .sort((a, b) => a.date.localeCompare(b.date));
     } catch (e2) {}
   }
 }
@@ -1461,16 +1575,10 @@ function autoDetectShabbat(date, time) {
 
 function autoFillEndDate() {
   const date = document.getElementById('shift-date').value;
-  const startTime = document.getElementById('shift-start').value;
-  const endTime = document.getElementById('shift-end').value;
   const isOvernight = (_currentShiftType === 'מלאה' || _currentShiftType === 'לילה');
   if (isOvernight && date) {
-    const endDateEl = document.getElementById('shift-end-date');
-    if (!endDateEl.value) endDateEl.value = nextDay(date);
-    // If end <= start, suggest next day
-    if (startTime && endTime && parseTime(endTime) <= parseTime(startTime)) {
-      if (!endDateEl.value || endDateEl.value === date) endDateEl.value = nextDay(date);
-    }
+    // Always auto-fill next day when start date changes
+    document.getElementById('shift-end-date').value = nextDay(date);
   }
 }
 
@@ -1565,9 +1673,11 @@ window.saveShift = async () => {
       showNotif('המשמרת עודכנה!', 'success');
     } else {
       const ref = await addDoc(collection(db, 'shifts'), shiftData);
-      window._state.shifts.unshift({ id: ref.id, ...shiftData });
+      window._state.shifts.push({ id: ref.id, ...shiftData });
       showNotif('המשמרת נוספה!', 'success');
     }
+    // Keep sorted by date ascending
+    window._state.shifts.sort((a, b) => a.date.localeCompare(b.date));
     closeModal();
     renderDashboard();
     renderShiftsPage();
@@ -1637,12 +1747,59 @@ window.updateSalaryPreview = () => {
 };
 
 // ============================================================
+// MONTH PICKER STRIP
+// ============================================================
+const heMonths = { '01':'ינואר','02':'פברואר','03':'מרץ','04':'אפריל','05':'מאי','06':'יוני','07':'יולי','08':'אוגוסט','09':'ספטמבר','10':'אוקטובר','11':'נובמבר','12':'דצמבר' };
+
+function buildMonthList() {
+  const now = new Date();
+  const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+  const fromShifts = [...new Set(window._state.shifts.map(s => s.month))];
+  const months = [...new Set([...fromShifts, currentMonth])].sort().reverse();
+  return months;
+}
+
+function renderMonthStrip(containerId, activeMonth, onClickFn) {
+  const months = buildMonthList();
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = months.map(m => {
+    const [y, mo] = m.split('-');
+    const count = window._state.shifts.filter(s => s.month === m).length;
+    const isActive = m === activeMonth;
+    return `<button class="month-pill ${isActive ? 'active' : ''}" onclick="${onClickFn}('${m}')">
+      <div class="month-pill-name">${heMonths[mo]}</div>
+      <div class="month-pill-year">${y}</div>
+      ${count > 0 ? `<div class="month-pill-count">${count} משמ'</div>` : ''}
+    </button>`;
+  }).join('');
+}
+
+// Active months state
+window._dashMonth = (() => {
+  const now = new Date();
+  return `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
+})();
+window._shiftsMonth = window._dashMonth;
+
+window.selectDashMonth = (m) => {
+  window._dashMonth = m;
+  renderDashboard();
+};
+
+window.selectShiftsMonth = (m) => {
+  window._shiftsMonth = m;
+  renderShiftsPage();
+};
+
+// ============================================================
 // RENDER DASHBOARD
 // ============================================================
 function renderDashboard() {
-  const now = new Date();
-  const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  const monthShifts = window._state.shifts.filter(s => s.month === currentMonth);
+  const selectedMonth = window._dashMonth;
+  const monthShifts = window._state.shifts
+    .filter(s => s.month === selectedMonth)
+    .sort((a, b) => a.date.localeCompare(b.date));
 
   const totalHours = monthShifts.reduce((sum, s) => sum + (s.durationHours || 0), 0);
   const totalPay = monthShifts.reduce((sum, s) => sum + (s.calculatedPay || 0), 0);
@@ -1653,13 +1810,19 @@ function renderDashboard() {
   document.getElementById('stat-shifts').textContent = monthShifts.length;
   document.getElementById('stat-night').textContent = nightShifts;
 
-  // Recent shifts (last 5)
-  const recent = window._state.shifts.slice(0, 5);
+  const [y, mo] = selectedMonth.split('-');
+  document.getElementById('dash-month').textContent = `${heMonths[mo]} ${y}`;
+  document.getElementById('dash-shifts-title').textContent = `משמרות ${heMonths[mo]} ${y}`;
+
+  // Month strip
+  renderMonthStrip('month-picker-strip', selectedMonth, 'selectDashMonth');
+
+  // Shifts list
   const container = document.getElementById('recent-shifts-list');
-  if (recent.length === 0) {
-    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🌙</div><div class="empty-text">עדיין אין משמרות</div><div class="empty-sub">הוסף/י את המשמרת הראשונה שלך</div></div>`;
+  if (monthShifts.length === 0) {
+    container.innerHTML = `<div class="empty-state"><div class="empty-icon">🌙</div><div class="empty-text">אין משמרות בחודש זה</div><div class="empty-sub">הוסף/י משמרת חדשה</div></div>`;
   } else {
-    container.innerHTML = recent.map(s => renderShiftItem(s)).join('');
+    container.innerHTML = monthShifts.map(s => renderShiftItem(s, true)).join('');
   }
 }
 
@@ -1667,26 +1830,23 @@ function renderDashboard() {
 // RENDER SHIFTS PAGE
 // ============================================================
 function populateMonthFilters() {
-  const months = [...new Set(window._state.shifts.map(s => s.month))].sort().reverse();
-  const now = new Date();
-  const currentMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}`;
-  if (!months.includes(currentMonth)) months.unshift(currentMonth);
-
-  const heMonths = { '01':'ינואר','02':'פברואר','03':'מרץ','04':'אפריל','05':'מאי','06':'יוני','07':'יולי','08':'אוגוסט','09':'ספטמבר','10':'אוקטובר','11':'נובמבר','12':'דצמבר' };
-
-  ['filter-month', 'export-month'].forEach(id => {
-    const el = document.getElementById(id);
-    if (!el) return;
-    el.innerHTML = months.map(m => {
-      const [y, mo] = m.split('-');
-      return `<option value="${m}">${heMonths[mo]} ${y}</option>`;
-    }).join('');
-  });
+  const months = buildMonthList();
+  const heM = heMonths;
+  // Only update export-month select
+  const el = document.getElementById('export-month');
+  if (!el) return;
+  el.innerHTML = months.map(m => {
+    const [y, mo] = m.split('-');
+    return `<option value="${m}">${heM[mo]} ${y}</option>`;
+  }).join('');
 }
 
 window.renderShiftsPage = () => {
-  const month = document.getElementById('filter-month')?.value || '';
-  const filtered = month ? window._state.shifts.filter(s => s.month === month) : window._state.shifts;
+  const selectedMonth = window._shiftsMonth;
+  renderMonthStrip('shifts-month-strip', selectedMonth, 'selectShiftsMonth');
+  const filtered = window._state.shifts
+    .filter(s => s.month === selectedMonth)
+    .sort((a, b) => a.date.localeCompare(b.date));
   const container = document.getElementById('all-shifts-list');
   if (filtered.length === 0) {
     container.innerHTML = `<div class="empty-state"><div class="empty-icon">📋</div><div class="empty-text">אין משמרות בחודש זה</div></div>`;
@@ -1696,9 +1856,10 @@ window.renderShiftsPage = () => {
 };
 
 function renderShiftItem(s, showActions = false) {
-  const d = new Date(s.date);
+  const d = new Date(s.date + 'T12:00:00');
   const day = d.getDate();
-  const month = d.toLocaleDateString('he-IL', { month: 'short' });
+  const monthStr = d.toLocaleDateString('he-IL', { month: 'short' });
+  const dayName = ['א׳','ב׳','ג׳','ד׳','ה׳','ו׳','ש׳'][d.getDay()];
   const typeKey = s.shiftType || '';
   const badgeClass = {
     'לילה': 'badge-night', 'יומית': 'badge-day', 'שבת': 'badge-shabbat',
@@ -1709,13 +1870,20 @@ function renderShiftItem(s, showActions = false) {
   const displayName = s.displayName || s.shiftType?.replace('_', ' ') || '—';
   const isOvernight = s.endDate && s.endDate !== s.date;
   const timeStr = isOvernight
-    ? `${s.startTime} (${s.date}) → ${s.endTime} (${s.endDate})`
+    ? `${s.startTime} → ${s.endTime} (+1)`
     : `${s.startTime} – ${s.endTime}`;
+
+  const actionsHtml = showActions ? `
+    <div class="shift-actions">
+      <button class="btn btn-glass btn-sm" onclick="openEditShift('${s.id}')">✏️</button>
+      <button class="btn btn-danger btn-sm" onclick="deleteShift('${s.id}')">🗑️</button>
+    </div>` : '';
 
   return `<div class="glass shift-item">
     <div class="shift-date-badge">
+      <div style="font-size:10px; color:var(--text-muted); font-weight:600;">${dayName}</div>
       <div class="shift-day">${day}</div>
-      <div class="shift-month">${month}</div>
+      <div class="shift-month">${monthStr}</div>
     </div>
     <div class="shift-info">
       <div><span class="shift-type-badge ${badgeClass}">${displayName}</span></div>
@@ -1725,52 +1893,145 @@ function renderShiftItem(s, showActions = false) {
       <div class="shift-pay">₪${Math.round(s.calculatedPay || 0).toLocaleString()}</div>
       <div class="shift-hours">${s.durationHours}ש</div>
     </div>
-    <div class="shift-actions">
-      <button class="btn btn-glass btn-sm" onclick="openEditShift('${s.id}')">✏️</button>
-      <button class="btn btn-danger btn-sm" onclick="deleteShift('${s.id}')">🗑️</button>
-    </div>
+    ${actionsHtml}
   </div>`;
 }
 
 // ============================================================
-// EXPORT
+// EXPORT & PRINT
 // ============================================================
 window.renderExportPage = () => {
   const month = document.getElementById('export-month')?.value;
   if (!month) return;
-  const shifts = window._state.shifts.filter(s => s.month === month);
+  const shifts = window._state.shifts
+    .filter(s => s.month === month)
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const name = window._state.userProfile?.name || '';
+  const [y, mo] = month.split('-');
+  const monthLabel = `${heMonths[mo]} ${y}`;
+  const totalHours = shifts.reduce((sum, s) => sum + (s.durationHours || 0), 0);
+  const area = document.getElementById('print-report-area');
+
   if (shifts.length === 0) {
-    document.getElementById('export-preview-content').innerHTML = '<span style="color:var(--text-muted)">אין משמרות בחודש זה</span>';
+    area.innerHTML = `<div class="glass-dark" style="padding:20px; text-align:center; color:var(--text-muted)">אין משמרות בחודש זה</div>`;
     return;
   }
-  const name = window._state.userProfile?.name || '';
-  const totalHours = shifts.reduce((sum, s) => sum + (s.durationHours || 0), 0);
-  const totalPay = shifts.reduce((sum, s) => sum + (s.calculatedPay || 0), 0);
 
-  document.getElementById('export-preview-content').innerHTML = `
-    <div style="margin-bottom:8px;"><strong>${name}</strong> — ${month}</div>
-    <div style="color:var(--text-muted)">סה"כ משמרות: ${shifts.length} | סה"כ שעות: ${totalHours.toFixed(2)} | סה"כ שכר: ₪${Math.round(totalPay).toLocaleString()}</div>
-  `;
+  const dayNames = ['ראשון','שני','שלישי','רביעי','חמישי','שישי','שבת'];
+
+  let rows = shifts.map(s => {
+    const d = new Date(s.date + 'T12:00:00');
+    const dayName = dayNames[d.getDay()];
+    const displayName = s.displayName || s.shiftType?.replace('_', ' ') || '—';
+    const isOvernight = s.endDate && s.endDate !== s.date;
+    const endStr = isOvernight ? `${s.endTime} (${s.endDate})` : s.endTime;
+    return `<tr>
+      <td>${s.date}</td>
+      <td>${dayName}</td>
+      <td>${displayName}</td>
+      <td>${s.startTime}</td>
+      <td>${endStr}</td>
+      <td>${s.durationHours}</td>
+      <td>${s.notes || ''}</td>
+    </tr>`;
+  }).join('');
+
+  area.innerHTML = `
+    <div id="printable-report" style="font-family:'Heebo',sans-serif; direction:rtl;">
+      <div class="glass" style="padding:24px; margin-bottom:0;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+          <div>
+            <div style="font-size:20px; font-weight:800;">דוח שעות — ${monthLabel}</div>
+            <div style="color:var(--text-muted); font-size:14px; margin-top:4px;">עובד/ת: <strong>${name}</strong></div>
+          </div>
+          <div style="text-align:left; color:var(--text-muted); font-size:13px;">
+            <div>סה"כ משמרות: <strong>${shifts.length}</strong></div>
+            <div>סה"כ שעות: <strong>${totalHours.toFixed(2)}</strong></div>
+          </div>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="print-table" style="width:100%; border-collapse:collapse; font-size:14px;">
+            <thead>
+              <tr style="background:rgba(124,92,252,0.08);">
+                <th style="padding:10px; border:1px solid rgba(124,92,252,0.2); text-align:right;">תאריך</th>
+                <th style="padding:10px; border:1px solid rgba(124,92,252,0.2); text-align:right;">יום</th>
+                <th style="padding:10px; border:1px solid rgba(124,92,252,0.2); text-align:right;">סוג משמרת</th>
+                <th style="padding:10px; border:1px solid rgba(124,92,252,0.2); text-align:right;">כניסה</th>
+                <th style="padding:10px; border:1px solid rgba(124,92,252,0.2); text-align:right;">יציאה</th>
+                <th style="padding:10px; border:1px solid rgba(124,92,252,0.2); text-align:right;">שעות</th>
+                <th style="padding:10px; border:1px solid rgba(124,92,252,0.2); text-align:right;">הערות</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${rows}
+            </tbody>
+            <tfoot>
+              <tr style="font-weight:700; background:rgba(124,92,252,0.05);">
+                <td colspan="5" style="padding:10px; border:1px solid rgba(124,92,252,0.2); text-align:right;">סה"כ</td>
+                <td style="padding:10px; border:1px solid rgba(124,92,252,0.2);">${totalHours.toFixed(2)}</td>
+                <td style="border:1px solid rgba(124,92,252,0.2);"></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div style="margin-top:20px; font-size:12px; color:var(--text-muted); border-top:1px solid rgba(124,92,252,0.1); padding-top:12px;">
+          דוח זה הופק מתוך מערכת משמרות שלי · ${new Date().toLocaleDateString('he-IL')}
+        </div>
+      </div>
+    </div>`;
 };
 
-document.getElementById('export-month')?.addEventListener('change', renderExportPage);
+window.printReport = () => {
+  const area = document.getElementById('printable-report');
+  if (!area) { showNotif('אנא בחר חודש תחילה', 'error'); return; }
+  const month = document.getElementById('export-month').value;
+  const [y, mo] = month.split('-');
+  const name = window._state.userProfile?.name || 'עובד';
+  const printWin = window.open('', '_blank', 'width=900,height=700');
+  printWin.document.write(`<!DOCTYPE html><html lang="he" dir="rtl"><head>
+    <meta charset="UTF-8">
+    <title>דוח שעות — ${heMonths[mo]} ${y}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <style>
+      body { font-family: 'Heebo', sans-serif; direction: rtl; padding: 30px; color: #1a1535; }
+      h1 { font-size: 22px; margin-bottom: 4px; }
+      .sub { color: #666; font-size: 14px; margin-bottom: 20px; }
+      table { width: 100%; border-collapse: collapse; font-size: 14px; }
+      th, td { border: 1px solid #ccc; padding: 9px 12px; text-align: right; }
+      th { background: #f0edff; font-weight: 700; }
+      tfoot td { font-weight: 700; background: #f8f7ff; }
+      .footer { margin-top: 24px; font-size: 11px; color: #aaa; border-top: 1px solid #eee; padding-top: 12px; }
+      .summary { display: flex; gap: 30px; margin-bottom: 20px; }
+      .summary-item { font-size: 14px; }
+      .summary-item strong { font-size: 16px; }
+      @media print { body { padding: 10px; } }
+    </style>
+  </head><body>
+    <h1>דוח שעות — ${heMonths[mo]} ${y}</h1>
+    <div class="sub">עובד/ת: <strong>${name}</strong></div>
+    ${area.querySelector('table').outerHTML.replace(/style="[^"]*"/g, '')}
+    <div class="footer">דוח זה הופק מתוך מערכת משמרות שלי · ${new Date().toLocaleDateString('he-IL')}</div>
+  </body></html>`);
+  printWin.document.close();
+  printWin.focus();
+  setTimeout(() => { printWin.print(); }, 600);
+};
 
 window.exportCSV = () => {
   const month = document.getElementById('export-month').value;
-  const shifts = window._state.shifts.filter(s => s.month === month);
+  const shifts = window._state.shifts
+    .filter(s => s.month === month)
+    .sort((a, b) => a.date.localeCompare(b.date));
   const name = window._state.userProfile?.name || 'עובד';
 
-  let csv = '\uFEFF'; // BOM for Hebrew
+  let csv = '\uFEFF';
   csv += `סיכום שעות\r\n${name}\r\n`;
-  csv += 'תאריך,כניסה במערכת,תיקון כניסה,יציאה במערכת,תיקון יציאה,סוג משמרת,הערות,סיכום זמן,שכר\r\n';
-
-  shifts.sort((a, b) => a.date.localeCompare(b.date)).forEach(s => {
-    csv += `${s.date},${s.startTime},,${s.endTime},,${s.shiftType.replace('_',' ')},${s.notes || ''},${s.durationHours},${s.calculatedPay}\r\n`;
+  csv += 'תאריך,כניסה,יציאה,סוג משמרת,הערות,שעות\r\n';
+  shifts.forEach(s => {
+    csv += `${s.date},${s.startTime},${s.endTime},${s.shiftType.replace('_',' ')},${s.notes || ''},${s.durationHours}\r\n`;
   });
-
   const totalH = shifts.reduce((sum, s) => sum + (s.durationHours || 0), 0);
-  const totalP = shifts.reduce((sum, s) => sum + (s.calculatedPay || 0), 0);
-  csv += `,,,,,,סה"כ,${totalH.toFixed(2)},${totalP.toFixed(2)}\r\n`;
+  csv += `,,,,סה"כ,${totalH.toFixed(2)}\r\n`;
 
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
@@ -1780,8 +2041,6 @@ window.exportCSV = () => {
   a.click();
   showNotif('הדוח יוצא בהצלחה!', 'success');
 };
-
-window.exportExcelLike = () => exportCSV(); // Same CSV works in Excel with .csv extension
 
 // ============================================================
 // PROFILE PAGE
@@ -1884,6 +2143,7 @@ window.showPage = (page) => {
   document.getElementById('page-' + page)?.classList.add('active');
   document.getElementById('nav-' + page)?.classList.add('active');
 
+  if (page === 'dashboard') renderDashboard();
   if (page === 'shifts') renderShiftsPage();
   if (page === 'export') { populateMonthFilters(); renderExportPage(); }
   if (page === 'profile') updateProfilePage();
