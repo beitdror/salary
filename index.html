@@ -1084,6 +1084,10 @@ const db = getFirestore(app);
 // ============================================================
 
 const MINIMUM_WAGE = 32.30;
+// תעריף לינה עמוקה (01:00-06:00) — מאומת מהתלוש: 30ש' × ₪34.33
+const SLEEP_DEEP_RATE = 34.33;
+// תוספת לילה — ₪1 לשעה על שעות 23:00-06:00 במשמרת לילה בערות
+const NIGHT_SUPPLEMENT = 1.00;
 
 function calcSeniorityMonths(startDate) {
   if (!startDate) return 0;
@@ -1178,6 +1182,7 @@ function calcTotalMinutes(startDate, startTime, endDate, endTime) {
 }
 
 function applyOvertimeToWorkHours(workHours, rate, breakdown) {
+  // שעות נוספות חול: עד 2ש' = 125%, מעל 2ש' = 150%
   const OT_THRESHOLD = 8.3;
   if (workHours <= OT_THRESHOLD) return { extraPay: 0, overtimeHours: 0 };
   const overtime = workHours - OT_THRESHOLD;
@@ -1193,17 +1198,36 @@ function applyOvertimeToWorkHours(workHours, rate, breakdown) {
   return { extraPay, overtimeHours: overtime };
 }
 
+function applyShabbatOvertimeToWorkHours(workHours, rate, breakdown) {
+  // שעות נוספות שבת: מעל 8.3ש' עבודה → 175% (לפי תלוש)
+  const OT_THRESHOLD = 8.3;
+  if (workHours <= OT_THRESHOLD) return { extraPay: 0, overtimeHours: 0 };
+  const overtime = workHours - OT_THRESHOLD;
+  const extraPay = overtime * rate * 0.75; // 175% = +75% על הבסיס
+  breakdown.push({ label: 'שעות נוספות שבת 175%', hours: +overtime.toFixed(2), pay: +(overtime * rate * 1.75).toFixed(2) });
+  return { extraPay, overtimeHours: overtime };
+}
+
 /**
- * calcShiftPay — minute-level classification engine.
+ * calcShiftPay — מנוע חישוב שכר ברמת דקה.
  *
- * סוגי משמרות:
- *   מלאה        — משמרת לינה (סעיף 17): בנדים של עבודה / שהייה / שינה / שינה עמוקה
- *   לילה        — עבודה בערות בלילה: שעות × תעריף ותק + שעות נוספות רגילות (בלי בנדי לינה)
- *   יומית/שישי  — שעות × תעריף ותק + שעות נוספות רגילות
- *   חג          — 150% flat
- *   ישיבה/הכשרה — flat ללא שבת
+ * מבוסס על תלוש שכר אמיתי (תלוש Online, ינואר 2026):
  *
- *   בכל סוג: שעות שבת → 150% אוטומטי (DST-aware)
+ * משמרת מלאה (לינה) — סעיף 17:
+ *   16:00-22:00 / 06:00+  → עבודה:           ₪rate/ש' (נספר ל-OT)
+ *   22:00-23:00            → כוננות פנסיוני:  ₪rate/ש' (לא נספר ל-OT)
+ *   23:00-01:00            → כוננות לא פנסיוני: ₪rate/ש' (לא נספר ל-OT)
+ *   01:00-06:00            → משמרת לינה:      ₪34.33/ש' (לא נספר ל-OT)
+ *   OT על עבודה: >8.3ש' → 125% (2ש'), 150% (מעבר)
+ *
+ * משמרת לילה בערות (לילה):
+ *   כל השעות:  ₪rate/ש' + OT רגיל
+ *   23:00-06:00: תוספת ₪1/ש' נוספת (כוננות לילה)
+ *
+ * שבת: 150% על שעות שבת רגילות, 175% אם הן גם שעות נוספות
+ *
+ * חג: 150% flat
+ * ישיבה/הכשרה/אחר: תעריף רגיל, ללא שבת ו-OT
  */
 function calcShiftPay(startDate, startTime, endDate, endTime, shiftType, workStartDate) {
   const rate = getHourlyRate(workStartDate);
@@ -1235,52 +1259,63 @@ function calcShiftPay(startDate, startTime, endDate, endTime, shiftType, workSta
 
   const shiftStart = new Date(startDate + 'T' + startTime + ':00');
   const shabbatPeriods = getShabbatPeriods(startDate, endDate);
+  const H = m => minutesToHours(m);
 
-  // ── משמרת מלאה (לינה) — סעיף 17, בנדים ──────────────────────────────────
+  // ── משמרת מלאה (לינה) — סעיף 17 מאומת מתלוש ─────────────────────────────
   if (shiftType === 'מלאה') {
-    let acc = { shabbat: 0, work: 0, gap: 0, sleepReg: 0, sleepMin: 0 };
+    let acc = { shabbat: 0, work: 0, gap: 0, sleepReg: 0, sleepDeep: 0 };
 
     for (let i = 0; i < totalMins; i++) {
       const t = new Date(shiftStart.getTime() + i * 60000);
       const tMin = t.getHours() * 60 + t.getMinutes();
 
       if (shabbatPeriods.some(p => t >= p.from && t < p.to)) { acc.shabbat++; continue; }
-      if (tMin >= 22*60 && tMin < 23*60)   { acc.gap++;      continue; }
-      if (tMin >= 23*60 || tMin < 1*60)    { acc.sleepReg++; continue; }
-      if (tMin >= 1*60  && tMin < 6*60)    { acc.sleepMin++; continue; }
+      if (tMin >= 22*60 && tMin < 23*60)   { acc.gap++;       continue; } // כוננות פנסיוני
+      if (tMin >= 23*60 || tMin < 1*60)    { acc.sleepReg++;  continue; } // כוננות לא פנסיוני
+      if (tMin >= 1*60  && tMin < 6*60)    { acc.sleepDeep++; continue; } // משמרת לינה
       acc.work++;
     }
 
-    const H = m => minutesToHours(m);
     const breakdown = [];
     let basePay = 0;
 
+    // שבת: 150% על הרגיל, 175% על שעות נוספות
     if (acc.shabbat > 0) {
-      const h = H(acc.shabbat), pay = +(h * rate * 1.5).toFixed(2);
-      basePay += pay;
-      breakdown.push({ label: 'שעות שבת (150%)', hours: +h.toFixed(2), pay });
+      const h = H(acc.shabbat);
+      const normalPay = +(h * rate * 1.5).toFixed(2);
+      basePay += normalPay;
+      breakdown.push({ label: 'שעות שבת (150%)', hours: +h.toFixed(2), pay: normalPay });
     }
+    // עבודה רגילה
     if (acc.work > 0) {
-      const h = H(acc.work), pay = +(h * rate).toFixed(2);
+      const h = H(acc.work);
+      const pay = +(h * rate).toFixed(2);
       basePay += pay;
       breakdown.push({ label: 'שעות עבודה (16-22, 06+)', hours: +h.toFixed(2), pay });
     }
+    // כוננות פנסיוני (22-23)
     if (acc.gap > 0) {
-      const h = H(acc.gap), pay = +(h * rate).toFixed(2);
+      const h = H(acc.gap);
+      const pay = +(h * rate).toFixed(2);
       basePay += pay;
-      breakdown.push({ label: 'שעת שהייה 22:00-23:00', hours: +h.toFixed(2), pay });
+      breakdown.push({ label: 'כוננות פנסיוני 22:00-23:00', hours: +h.toFixed(2), pay });
     }
+    // כוננות לא פנסיוני (23-01)
     if (acc.sleepReg > 0) {
-      const h = H(acc.sleepReg), pay = +(h * rate).toFixed(2);
+      const h = H(acc.sleepReg);
+      const pay = +(h * rate).toFixed(2);
       basePay += pay;
-      breakdown.push({ label: 'שעות לינה 23:00-01:00', hours: +h.toFixed(2), pay });
+      breakdown.push({ label: 'כוננות לא פנסיוני 23:00-01:00', hours: +h.toFixed(2), pay });
     }
-    if (acc.sleepMin > 0) {
-      const h = H(acc.sleepMin), pay = +(h * MINIMUM_WAGE).toFixed(2);
+    // משמרת לינה עמוקה (01-06) — ₪34.33/ש' לפי תלוש
+    if (acc.sleepDeep > 0) {
+      const h = H(acc.sleepDeep);
+      const pay = +(h * SLEEP_DEEP_RATE).toFixed(2);
       basePay += pay;
-      breakdown.push({ label: 'שעות לינה 01:00-06:00 (שכר מינימום)', hours: +h.toFixed(2), pay });
+      breakdown.push({ label: 'משמרת לינה 01:00-06:00 (₪34.33)', hours: +h.toFixed(2), pay });
     }
 
+    // שעות נוספות רק על שעות עבודה (לא כוננות, לא לינה)
     const workHours = H(acc.work);
     const { extraPay, overtimeHours } = applyOvertimeToWorkHours(workHours, rate, breakdown);
 
@@ -1291,9 +1326,54 @@ function calcShiftPay(startDate, startTime, endDate, endTime, shiftType, workSta
     return result;
   }
 
-  // ── כל שאר המשמרות (לילה, יומית, בוקר שישי) ─────────────────────────────
-  // עבודה בערות: שעות × תעריף ותק.
-  // שעות שבת → 150%, שעות רגילות → 100%, שעות נוספות לפי כלל.
+  // ── משמרת לילה בערות ──────────────────────────────────────────────────────
+  // שכר רגיל + תוספת ₪1 לשעה על 23:00-06:00 (כוננות לילה)
+  if (shiftType === 'לילה') {
+    let shabbatMins = 0, workMins = 0, nightSuppMins = 0;
+
+    for (let i = 0; i < totalMins; i++) {
+      const t = new Date(shiftStart.getTime() + i * 60000);
+      const tMin = t.getHours() * 60 + t.getMinutes();
+      if (shabbatPeriods.some(p => t >= p.from && t < p.to)) {
+        shabbatMins++;
+      } else {
+        workMins++;
+        // תוספת לילה: 23:00-06:00
+        if (tMin >= 23*60 || tMin < 6*60) nightSuppMins++;
+      }
+    }
+
+    const breakdown = [];
+    let basePay = 0;
+
+    if (shabbatMins > 0) {
+      const h = H(shabbatMins), pay = +(h * rate * 1.5).toFixed(2);
+      basePay += pay;
+      breakdown.push({ label: 'שעות שבת (150%)', hours: +h.toFixed(2), pay });
+    }
+    if (workMins > 0) {
+      const h = H(workMins), pay = +(h * rate).toFixed(2);
+      basePay += pay;
+      breakdown.push({ label: 'שעות עבודה', hours: +h.toFixed(2), pay });
+    }
+    // תוספת כוננות לילה ₪1/שעה (23:00-06:00)
+    if (nightSuppMins > 0) {
+      const h = H(nightSuppMins), pay = +(h * NIGHT_SUPPLEMENT).toFixed(2);
+      basePay += pay;
+      breakdown.push({ label: 'תוספת כוננות לילה 23:00-06:00 (₪1/ש\')', hours: +h.toFixed(2), pay });
+    }
+
+    const workHours = H(workMins);
+    const { extraPay, overtimeHours } = applyOvertimeToWorkHours(workHours, rate, breakdown);
+
+    result.regularHours  = workHours;
+    result.overtimeHours = overtimeHours;
+    result.breakdown     = breakdown;
+    result.totalPay      = +(basePay + extraPay).toFixed(2);
+    return result;
+  }
+
+  // ── יומית / בוקר שישי — עבודה רגילה ─────────────────────────────────────
   let shabbatMins = 0, workMins = 0;
 
   for (let i = 0; i < totalMins; i++) {
@@ -1305,7 +1385,6 @@ function calcShiftPay(startDate, startTime, endDate, endTime, shiftType, workSta
     }
   }
 
-  const H = m => minutesToHours(m);
   const breakdown = [];
   let basePay = 0;
 
@@ -1320,7 +1399,6 @@ function calcShiftPay(startDate, startTime, endDate, endTime, shiftType, workSta
     breakdown.push({ label: 'שעות עבודה', hours: +h.toFixed(2), pay });
   }
 
-  // שעות נוספות — רק על שעות עבודה רגילות (לא שבת)
   const workHours = H(workMins);
   const { extraPay, overtimeHours } = applyOvertimeToWorkHours(workHours, rate, breakdown);
 
