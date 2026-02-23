@@ -907,7 +907,7 @@
             </div>
             <div class="form-group">
               <label class="form-label">תאריך תחילת עבודה</label>
-              <input type="month" class="form-input" id="profile-start-date">
+              <input type="month" class="form-input" id="profile-start-date" oninput="previewSeniority(this.value)">
               <div style="font-size:12px; color:var(--text-muted); margin-top:6px;" id="profile-seniority-display"></div>
             </div>
           </div>
@@ -1522,16 +1522,20 @@ async function loadUserProfile(uid) {
 window.saveProfile = async () => {
   const name = document.getElementById('profile-name').value.trim();
   const startDate = document.getElementById('profile-start-date').value;
+  if (!name) return showNotif('אנא הזן שם מלא', 'error');
   if (!startDate) return showNotif('אנא בחר תאריך תחילת עבודה', 'error');
   try {
     await updateDoc(doc(db, 'users', window._state.user.uid), { name, startDate });
+    // Guard: אם userProfile היה null מסיבה כלשהי — צור אובייקט חדש
+    if (!window._state.userProfile) window._state.userProfile = {};
     window._state.userProfile.name = name;
     window._state.userProfile.startDate = startDate;
     updateHeaderUI();
-    showNotif('הפרופיל נשמר!', 'success');
     updateProfilePage();
+    showNotif('✅ הפרופיל נשמר בהצלחה!', 'success');
   } catch (e) {
-    showNotif('שגיאה בשמירה', 'error');
+    console.error('saveProfile error:', e);
+    showNotif('שגיאה בשמירה: ' + (e.message || e.code || 'בדוק חיבור'), 'error');
   }
 };
 
@@ -1549,10 +1553,13 @@ async function initializeApp2() {
 }
 
 function updateHeaderUI() {
-  const name = window._state.userProfile?.name || window._state.user?.email || 'משתמש';
-  document.getElementById('header-name').textContent = name.split(' ')[0];
-  document.getElementById('header-avatar').textContent = name.charAt(0).toUpperCase();
-  document.getElementById('dash-name').textContent = name.split(' ')[0];
+  const p = window._state.userProfile;
+  // לעולם לא מציגים את האימייל הפנימי של Firebase (u1234@otot.app)
+  // מציגים שם > שם משתמש > 'משתמש' — בלבד
+  const displayName = p?.name || p?.username || 'משתמש';
+  document.getElementById('header-name').textContent = displayName.split(' ')[0];
+  document.getElementById('header-avatar').textContent = displayName.charAt(0).toUpperCase();
+  document.getElementById('dash-name').textContent = displayName.split(' ')[0];
   const now = new Date();
   document.getElementById('dash-month').textContent = now.toLocaleDateString('he-IL', { year: 'numeric', month: 'long' });
 }
@@ -2121,25 +2128,32 @@ window.exportCSV = () => {
 // ============================================================
 // PROFILE PAGE
 // ============================================================
+// עדכון ותק ותעריף — נקרא גם בזמן אמת (oninput) וגם בטעינת הדף
+window.previewSeniority = (startDate) => {
+  const rateEl  = document.getElementById('profile-rate');
+  const display = document.getElementById('profile-seniority-display');
+  if (!startDate) {
+    rateEl.textContent  = '—';
+    display.textContent = '';
+    return;
+  }
+  const months = calcSeniorityMonths(startDate);
+  const rate   = getHourlyRate(startDate);
+  rateEl.textContent = `₪${rate} לשעה`;
+  const years     = Math.floor(months / 12);
+  const remMonths = months % 12;
+  let text = 'ותק: ';
+  if (years > 0)     text += `${years} שנה${years > 1 ? 'ים' : ''} `;
+  if (remMonths > 0) text += `ו-${remMonths} חודשים`;
+  if (years === 0 && remMonths === 0) text += 'פחות מחודש';
+  display.textContent = text;
+};
+
 window.updateProfilePage = () => {
   const p = window._state.userProfile;
-  document.getElementById('profile-name').value = p?.name || '';
+  document.getElementById('profile-name').value       = p?.name      || '';
   document.getElementById('profile-start-date').value = p?.startDate || '';
-  const months = calcSeniorityMonths(p?.startDate);
-  const rate = getHourlyRate(p?.startDate);
-  document.getElementById('profile-rate').textContent = `₪${rate} לשעה`;
-  const display = document.getElementById('profile-seniority-display');
-  if (p?.startDate) {
-    const years = Math.floor(months / 12);
-    const remMonths = months % 12;
-    let text = `ותק: `;
-    if (years > 0) text += `${years} שנה${years > 1 ? 'ים' : ''} `;
-    if (remMonths > 0) text += `ו-${remMonths} חודשים`;
-    if (years === 0 && remMonths === 0) text += 'פחות מחודש';
-    display.textContent = text;
-  } else {
-    display.textContent = '';
-  }
+  previewSeniority(p?.startDate || '');
 };
 
 // ============================================================
